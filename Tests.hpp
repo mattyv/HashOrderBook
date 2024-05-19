@@ -129,7 +129,7 @@ static void RunTests()
     std::cout << "What size are things?..." << std::endl;
     std::cout << "size of bid_ask_node: " << sizeof(BookType::bid_ask_node) << std::endl;
     std::cout << "size of collision_bucket: " << sizeof(BookType::collision_bucket<3>) << std::endl;
-    std::cout << "size of overflow_bucket_type: " << sizeof(BookType::overflow_bucket_type) << std::endl;
+    std::cout << "size of overflow_bucket_type: " << sizeof(BookType::collision_bucket_type) << std::endl;
     std::cout << "size of bucket_type: " << sizeof(BookType::bucket_type) << std::endl;
     std::cout << "Size of static order_book: " << sizeof(order_book) << " bytes. Or "
                 << sizeof(order_book) / getCacheLineSize() << " cache lines." << std::endl;
@@ -139,6 +139,8 @@ static void RunTests()
     //std::cout << "Cache sizes: L1 - " << std::get<0>(cacheSizes) << ", L2 - " << std::get<2>(cacheSizes) << ", L3 - " << std::get<3>(cacheSizes) << std::endl;
     
     std::cout << std::endl << "Running tests..." << std::endl;
+    
+    std::cout << "Testing hashing..." << std::endl;
     
     test(BookType::tick_size_val, tick_size, "tick_size_val failed", __LINE__);
     test(BookType::fast_book_size_val, fast_book_size, "fast_book_size_val failed", __LINE__);
@@ -222,7 +224,113 @@ static void RunTests()
     test(hash, 9ul, "hash_key failed", __LINE__);
     test(collision_bucket, 3ul, "hash_key failed", __LINE__);
     
-    std::cout << "All tests passed" << std::endl;
+    std::cout << "Hashing passed" << std::endl;
+    
+    
+    /*                   Testing Inserts            */
+    std::cout << "Testing inserts..." << std::endl;
+    
+    price = mid_price;
+    size_t volume = mid_price;
+    std::cout << "Inserting Bid Price: " << price << " Volume: " << volume << std::endl;
+    test(order_book.insert(BookType::Side::BID, std::move(price), std::move(volume)), "insert failed", __LINE__);
+    test_failure(order_book.insert(BookType::Side::BID, std::move(price), std::move(volume)), "insert failed", __LINE__);
+    
+    std::cout << "Inserting Ask Price: " << price << " Volume: " << volume << std::endl;
+    test(order_book.insert(BookType::Side::ASK, std::move(price), std::move(volume)), "insert failed", __LINE__);
+    test_failure(order_book.insert(BookType::Side::ASK, std::move(price), std::move(volume)), "insert failed", __LINE__);
+    //test(order_book.getBestBidInxed(), 110ul, "insert failed", __LINE__);
+    //test(order_book.getMidIndex())
+    
+    price--;
+    volume--;
+    std::cout << "Inserting Bid Price: " << price << " Volume: " << volume << std::endl;
+    test(order_book.insert(BookType::Side::BID, std::move(price), std::move(volume)), "insert failed", __LINE__);
+    
+    price += 2;
+    volume += 2;
+    std::cout << "Inserting Ask Price: " << price << " Volume: " << volume << std::endl;
+    test(order_book.insert(BookType::Side::ASK, std::move(price), std::move(volume)), "insert failed", __LINE__);
+    
+    price = mid_price - ((fast_book_size / 2) * tick_size);
+    volume = price;
+    std::cout << "Inserting Bid Price: " << price << " Volume: " << volume << std::endl;
+    test(order_book.insert(BookType::Side::BID, std::move(price), std::move(volume)), "insert failed", __LINE__);
+    size_t ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1;
+    size_t ask_volume = ask_price;
+    std::cout << "Inserting Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
+    test(order_book.insert(BookType::Side::ASK, std::move(ask_price), std::move(ask_volume)), "insert failed", __LINE__);
+    
+    //to to next collision bucket up and down
+    price--;
+    volume--;
+    ask_price++;
+    ask_volume++;
+    std::cout << "Inserting Bid Price: " << price << " Volume: " << volume << std::endl;
+    test(order_book.insert(BookType::Side::BID, std::move(price), std::move(volume)), "insert failed", __LINE__);
+    std::cout << "Inserting Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
+    test(order_book.insert(BookType::Side::ASK, std::move(ask_price), std::move(ask_volume)), "insert failed", __LINE__);
+    
+    price = mid_price - ((fast_book_size / 2) * tick_size) - (fast_book_size * tick_size);
+    volume = price;
+    ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1 + (fast_book_size * tick_size);
+    ask_volume = ask_price;
+    std::cout << "Inserting Bid Price: " << price << " Volume: " << volume << std::endl;
+    test(order_book.insert(BookType::Side::BID, std::move(price), std::move(volume)), "insert failed", __LINE__);
+    std::cout << "Inserting Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
+    test(order_book.insert(BookType::Side::ASK, std::move(ask_price), std::move(ask_volume)), "insert failed", __LINE__);
+    
+    //to to next collision bucket up and down
+    price--;
+    volume--;
+    ask_price++;
+    ask_volume++;
+    std::cout << "Inserting Bid Price: " << price << " Volume: " << volume << std::endl;
+    test(order_book.insert(BookType::Side::BID, std::move(price), std::move(volume)), "insert failed", __LINE__);
+    std::cout << "Inserting Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
+    test(order_book.insert(BookType::Side::ASK, std::move(ask_price), std::move(ask_volume)), "insert failed", __LINE__);
+    
+    price = mid_price - ((fast_book_size / 2) * tick_size) - (2*fast_book_size * tick_size);
+    volume = price;
+    ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1 + (2*fast_book_size * tick_size);
+    ask_volume = ask_price;
+    std::cout << "Inserting Bid Price: " << price << " Volume: " << volume << std::endl;
+    test(order_book.insert(BookType::Side::BID, std::move(price), std::move(volume)), "insert failed", __LINE__);
+    std::cout << "Inserting Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
+    test(order_book.insert(BookType::Side::ASK, std::move(ask_price), std::move(ask_volume)), "insert failed", __LINE__);
+    
+    //to to next collision bucket up and down
+    price--;
+    volume--;
+    ask_price++;
+    ask_volume++;
+    std::cout << "Inserting Bid Price: " << price << " Volume: " << volume << std::endl;
+    test(order_book.insert(BookType::Side::BID, std::move(price), std::move(volume), true), "insert failed", __LINE__);
+    std::cout << "Inserting Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
+    test(order_book.insert(BookType::Side::ASK, std::move(ask_price), std::move(ask_volume)), "insert failed", __LINE__);
+    
+    price = mid_price - ((fast_book_size / 2) * tick_size) - (3*fast_book_size * tick_size);
+    volume = price;
+    ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1 + (3*fast_book_size * tick_size);
+    ask_volume = ask_price;
+    std::cout << "Inserting Bid Price: " << price << " Volume: " << volume << std::endl;
+    test(order_book.insert(BookType::Side::BID, std::move(price), std::move(volume)), "insert failed", __LINE__);
+    std::cout << "Inserting Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
+    test(order_book.insert(BookType::Side::ASK, std::move(ask_price), std::move(ask_volume)), "insert failed", __LINE__);
+    
+    //to to next collision bucket up and down into overflow buckets this time
+    /*price--;
+    volume--;
+    ask_price++;
+    ask_volume++;
+    std::cout << "Inserting Bid Price: " << price << " Volume: " << volume << std::endl;
+    test(order_book.insert(BookType::Side::BID, std::move(price), std::move(volume)), "insert failed", __LINE__);
+    std::cout << "Inserting Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
+    test(order_book.insert(BookType::Side::ASK, std::move(ask_price), std::move(ask_volume)), "insert failed", __LINE__);
+    
+    std::cout << "Inserts passed" << std::endl;
+    
+    std::cout << "All tests passed" << std::endl;*/
 }
 
 #endif /* Tests_h */
