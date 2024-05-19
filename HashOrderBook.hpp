@@ -82,7 +82,7 @@ private:
     std::optional<Key> _best_bid, _best_offer;
     short _max_overflow_bucket_size;
     size_t _current_mid_index = fast_book_size / 2;
-    
+    size_t _size = 0;
 private:
     constexpr size_t _positiveMod(long x, long mod) const
     {
@@ -121,6 +121,19 @@ private:
             }
         }
         return nullptr;
+    }
+    
+    bool _erase_node(const Key& key, typename collision_bucket_type::overflow_bucket_type& overflow_bucket) noexcept
+    {
+        for(auto it = overflow_bucket->begin(); it != overflow_bucket->end(); ++it)
+        {
+            if(it->key == key)
+            {
+                overflow_bucket->erase(it);
+                return true;
+            }
+        }
+        return false;
     }
     
     void _update_bbo_and_mid(Side side, const Key& key)
@@ -203,7 +216,7 @@ public:
         return _buckets[_current_mid_index].first_node.key;
     }*/
     
-    bool insert(Side side, Key&& key, Value&& value, bool thrw = false)
+    bool insert(Side side, Key&& key, Value&& value)
     {
         size_t hash, collision_bucket;
         hash_key(key, hash, collision_bucket);
@@ -216,6 +229,7 @@ public:
             if(!node)
             {
                bucket.overflow_bucket->emplace_back(bid_ask_node(std::move(key), std::move(value), side));
+                ++_size;
                 return true;
             }
             else
@@ -228,11 +242,7 @@ public:
         }
         
         if(!node) //if we did find something in the collisin buckets. error
-        {
-            if(thrw)
-                throw std::runtime_error("Error!!");
             return false;
-        }
         decltype(node->bid_value)* value_ptr = nullptr;
         if(side == Side::BID)
             value_ptr = &node->bid_value;
@@ -240,20 +250,18 @@ public:
             value_ptr = &node->ask_value;
         
         if(value_ptr->has_value()) //we already have a value! so is error
-        {
-            if(thrw)
-                throw std::runtime_error("Error!!");
             return false;
-        }
+
         else
         {
             *value_ptr = std::move(value);
             _update_bbo_and_mid(side, key);
+            ++_size;
             return true;
         }
     }
     
-    bool find(Side side,  const Key& key, Value& value)
+    bool find(Side side, const Key& key, Value& value)
     {
         size_t hash, collision_bucket;
         hash_key(key, hash, collision_bucket);
@@ -282,6 +290,42 @@ public:
             return true;
         }
         return false;
+    }
+    
+    bool erase(Side side, const Key& key)
+    {
+        size_t hash, collision_bucket;
+        hash_key(key, hash, collision_bucket);
+        auto& bucket = _buckets[hash];
+        
+        bid_ask_node* node = nullptr;
+        if(collision_bucket >= collision_buckets)  //if we are using overflow buckets? i.e. collison bucket is larget than the hardcoded allowed
+        {
+            return _erase_node(key, bucket.overflow_bucket); //it might be in overflow buckets
+        }
+        else
+        {
+            auto& nodes = *bucket.nodes;
+            node = &nodes[collision_bucket];
+        }
+        
+        if(!node) //if we did find something in the collisin buckets. error
+            return false;
+        
+        if(side == Side::BID && node->bid_value.has_value())
+        {
+            node->bid_value.reset();
+            --_size;
+            return true;
+        }
+        else if(side == Side::ASK && node->ask_value.has_value())
+        {
+            node->ask_value.reset();
+            --_size;
+            return true;
+        }
+        return false;
+        
     }
     
     size_t getByteSize() const

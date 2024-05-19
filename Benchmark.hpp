@@ -112,6 +112,24 @@ static void RunBenchmarks()
     
     std::cout << "Book find time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(book_find_end - book_find_start).count()  << "ns" << std::endl;
     
+    auto map_erase_start = std::chrono::high_resolution_clock::now();
+    for(auto key: keys)
+    {
+        book_map.erase(key);
+    }
+    auto map_erase_end = std::chrono::high_resolution_clock::now();
+    
+    std::cout << "Map erase time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(map_erase_end - map_erase_start).count() << "ns" << std::endl;
+    
+    auto book_erase_start = std::chrono::high_resolution_clock::now();
+    for(auto key: keys)
+    {
+        book.erase(BookType::Side::BID, key);
+    }
+    auto book_erase_end = std::chrono::high_resolution_clock::now();
+    
+    std::cout << "Book erase time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(book_erase_end - book_erase_start).count() << "ns" << std::endl;
+    
 }
 
 #endif /* Benchmark_h */

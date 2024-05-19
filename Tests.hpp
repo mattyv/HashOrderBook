@@ -307,8 +307,8 @@ static void RunTests()
     ask_price++;
     ask_volume++;
     std::cout << "Inserting Bid Price: " << price << " Volume: " << volume << std::endl;
-    test(order_book.insert(BookType::Side::BID, std::move(price), std::move(volume), true), "insert failed", __LINE__);
-    test_failure(order_book.insert(BookType::Side::BID, std::move(price), std::move(volume), true), "insert failed", __LINE__);
+    test(order_book.insert(BookType::Side::BID, std::move(price), std::move(volume)), "insert failed", __LINE__);
+    test_failure(order_book.insert(BookType::Side::BID, std::move(price), std::move(volume)), "insert failed", __LINE__);
     std::cout << "Inserting Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
     test(order_book.insert(BookType::Side::ASK, std::move(ask_price), std::move(ask_volume)), "insert failed", __LINE__);
     test_failure(order_book.insert(BookType::Side::ASK, std::move(ask_price), std::move(ask_volume)), "insert failed", __LINE__);
