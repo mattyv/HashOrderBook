@@ -11,6 +11,7 @@
 #include <array>
 #include <optional>
 #include <list>
+#include <memory>
 
 //concept for key to require == - /
 template<typename KeyType>
@@ -25,8 +26,7 @@ template<KeyConcept Key,
         class Value,
         Key tick_size, //small key value to show minimum price movement
         size_t fast_book_size, //fast book size is size of bid and ask depth combined
-        short collision_buckets,
-        short max_overflow_bucket = 3> //maximum number of overflow buckets used on any key before rehashing
+        size_t collision_buckets>
 class HashOrderBook
 {
 public:
@@ -35,6 +35,10 @@ public:
         BID,
         ASK
     };
+    
+    static constexpr Key tick_size_val = tick_size;
+    static constexpr size_t fast_book_size_val = fast_book_size;
+    static constexpr size_t collision_buckets_val = collision_buckets;
 private:
     struct bid_ask_node
     {
@@ -47,8 +51,9 @@ private:
     template<size_t buckets>
     struct collision_bucket
     {
-        using overflow_bucket_type = std::list<bid_ask_node>;
-        using bucket_type = std::array<bid_ask_node, buckets>;
+        bid_ask_node first_node;
+        using overflow_bucket_type = std::unique_ptr<std::list<bid_ask_node>>;
+        using bucket_type = std::unique_ptr<std::array<bid_ask_node, buckets>>;
         bucket_type nodes;
         overflow_bucket_type overflow_bucket;
     };
@@ -72,13 +77,20 @@ private:
         return result;
     }
     
-    constexpr size_t _calc_collision_bucket(long index, long size) const noexcept
+    constexpr size_t _calc_collision_bucket(long index, long size) const
     {
-        if(index < 0) //cheeky hack to get return x+1
-            index -= size;
-        
-        return std::abs(index /size);
+        if (size == 0) {
+            throw std::invalid_argument("size must be non-zero");  // Handle division by zero scenario
+        }
+
+        // For positive indices or zero, perform the normal division
+        if (index >= 0)
+            return static_cast<size_t>(index / size);
+
+        // For negative indices, adjust the bucket calculation
+        return static_cast<size_t>(std::abs(index + 1) / size) + 1;
     }
+
     
     bid_ask_node* _find_node(const Key& key, typename overflow_bucket_type::overflow_bucket_type& overflow_bucket) const noexcept
     {
@@ -113,7 +125,13 @@ private:
 public:
     HashOrderBook(const Key& starting_mid_price)
     : _starting_mid_price(starting_mid_price)
-    {}
+    {
+        for(auto& bucket : _buckets)
+        {
+            bucket.nodes = std::make_unique<std::array<bid_ask_node, collision_buckets>>();
+            bucket.overflow_bucket = std::make_unique<std::list<bid_ask_node>>();
+        }
+    }
     ~HashOrderBook() = default;
     HashOrderBook(const HashOrderBook&) = delete;
     
@@ -159,6 +177,28 @@ public:
             return true;
         }
     }
+    
+    size_t getByteSize() const
+    {
+        size_t size = 0;
+        for(auto& bucket : _buckets)
+        {
+            size += sizeof(bucket.first_node);
+            size += sizeof(bucket.nodes);
+            size += sizeof(bucket.overflow_bucket);
+            for(auto& node : *bucket.nodes)
+            {
+                size += sizeof(node);
+            }
+            for(auto& node : *bucket.overflow_bucket)
+            {
+                size += sizeof(node);
+            }
+        }
+        return size;
+    }
+    
+    friend void RunTests();
 };
 
 #endif /* HashOrderBook_h */
