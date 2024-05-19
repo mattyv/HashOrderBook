@@ -35,7 +35,7 @@ static void RunBenchmarks()
     std::uniform_int_distribution<> fullRangeDist(0, 200);
     
     std::vector<size_t> keys;
-    constexpr int NUM_KEYS = 1000; // Total number of keys to generate
+    constexpr int NUM_KEYS = 200; // Total number of keys to generate
 
     for (int i = 0; i < NUM_KEYS; i++) {
         double probability = (double)rand() / RAND_MAX; // Generate probability for distribution choice
@@ -55,6 +55,11 @@ static void RunBenchmarks()
         keys.push_back(key);
     }
     
+    for(auto key: keys)
+    {
+        std::cout << key << std::endl;
+    }
+    
     // Insert keys into the book
     std::map<size_t, size_t> book_map;
     auto startMap = std::chrono::high_resolution_clock::now();
@@ -65,7 +70,7 @@ static void RunBenchmarks()
     }
     auto endMap = std::chrono::high_resolution_clock::now();
     
-    std::cout << "Map insert time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endMap - startMap).count() / keys.size() << "ns" << std::endl;
+    std::cout << "Map insert time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endMap - startMap).count()<< "ns" << std::endl;
     
     
     auto book_start = std::chrono::high_resolution_clock::now();
@@ -75,7 +80,7 @@ static void RunBenchmarks()
     }
     auto book_end = std::chrono::high_resolution_clock::now();
     
-    std::cout << "Book insert time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(book_end - book_start).count() / keys.size() << "ns" << std::endl;
+    std::cout << "Book insert time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(book_end - book_start).count() << "ns" << std::endl;
     
     // benchmark find
     auto startMapFind = std::chrono::high_resolution_clock::now();
@@ -90,7 +95,7 @@ static void RunBenchmarks()
         std::cerr << "Benchmark failed" << std::endl;
     }
     
-    std::cout << "Map find time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endMapFind - startMapFind).count() / keys.size() << "ns" << std::endl;
+    std::cout << "Map find time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endMapFind - startMapFind).count() << "ns" << std::endl;
     
     auto book_find_start = std::chrono::high_resolution_clock::now();
     size_t value = 0;
@@ -105,7 +110,7 @@ static void RunBenchmarks()
         std::cerr << "Benchmark failed" << std::endl;
     }
     
-    std::cout << "Book find time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(book_find_end - book_find_start).count() / keys.size() << "ns" << std::endl;
+    std::cout << "Book find time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(book_find_end - book_find_start).count()  << "ns" << std::endl;
     
 }
 
