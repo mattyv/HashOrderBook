@@ -344,10 +344,10 @@ static void RunTests()
     //find in the middle of the book
     price = mid_price;
     ask_price = mid_price;
-    std::cout << "Finding Bid Price: " << price << " Volume: " << volume << std::endl;
+    std::cout << "Finding Bid Price: " << price << std::endl;
     test(order_book.find(BookType::Side::BID, price, volume), "find failed", __LINE__);
     test(volume, mid_price, "find failed", __LINE__);
-    std::cout << "Finding Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
+    std::cout << "Finding Ask Price: " << ask_price << std::endl;
     test(order_book.find(BookType::Side::ASK, ask_price, ask_volume), "find failed", __LINE__);
     test(ask_volume, mid_price, "find failed", __LINE__);
     
@@ -361,79 +361,179 @@ static void RunTests()
     test(ask_volume, price, "find failed", __LINE__);
     
     price = mid_price - ((fast_book_size / 2) * tick_size);
-    std::cout << "Finding Bid Price: " << price << " Volume: " << volume << std::endl;
+    std::cout << "Finding Bid Price: " << price << std::endl;
     test(order_book.find(BookType::Side::BID, price, volume), "find failed", __LINE__);
     test(volume, mid_price - ((fast_book_size / 2) * tick_size), "find failed", __LINE__);
     ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1;
-    std::cout << "Finding Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
+    std::cout << "Finding Ask Price: " << ask_price << std::endl;
     test(order_book.find(BookType::Side::ASK, ask_price, ask_volume), "find failed", __LINE__);
     
     //to to next collision bucket up and down
     price--;
     ask_price++;
-    std::cout << "Finding Bid Price: " << price << " Volume: " << volume << std::endl;
+    std::cout << "Finding Bid Price: " << price << std::endl;
     test(order_book.find(BookType::Side::BID, price, volume), "find failed", __LINE__);
     test(volume, price, "find failed", __LINE__);
     
-    std::cout << "Finding Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
+    std::cout << "Finding Ask Price: " << ask_price << std::endl;
     test(order_book.find(BookType::Side::ASK, ask_price, ask_volume), "find failed", __LINE__);
     test(ask_volume, ask_price, "find failed", __LINE__);
     
     price = mid_price - ((fast_book_size / 2) * tick_size) - (fast_book_size * tick_size);
     ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1 + (fast_book_size * tick_size);
-    std::cout << "Finding Bid Price: " << price << " Volume: " << volume << std::endl;
+    std::cout << "Finding Bid Price: " << price << std::endl;
     test(order_book.find(BookType::Side::BID, price, volume), "find failed", __LINE__);
-    std::cout << "Finding Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
+    std::cout << "Finding Ask Price: " << ask_price << std::endl;
     test(order_book.find(BookType::Side::ASK, ask_price, ask_volume), "find failed", __LINE__);
     
     //to to next collision bucket up and down
     price--;
     ask_price++;
-    std::cout << "Finding Bid Price: " << price << " Volume: " << volume << std::endl;
+    std::cout << "Finding Bid Price: " << price << std::endl;
     test(order_book.find(BookType::Side::BID, price, volume), "find failed", __LINE__);
     test(volume, price, "find failed", __LINE__);
-    std::cout << "Finding Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
+    std::cout << "Finding Ask Price: " << ask_price << std::endl;
     test(order_book.find(BookType::Side::ASK, ask_price, ask_volume), "find failed", __LINE__);
     test(ask_volume, ask_price, "find failed", __LINE__);
     
     price = mid_price - ((fast_book_size / 2) * tick_size) - (2*fast_book_size * tick_size);
     ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1 + (2*fast_book_size * tick_size);
-    std::cout << "Finding Bid Price: " << price << " Volume: " << volume << std::endl;
+    std::cout << "Finding Bid Price: " << price << std::endl;
     test(order_book.find(BookType::Side::BID, price, volume), "find failed", __LINE__);
     test(volume, price, "find failed", __LINE__);
-    std::cout << "Finding Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
+    std::cout << "Finding Ask Price: " << ask_price << std::endl;
     test(order_book.find(BookType::Side::ASK, ask_price, ask_volume), "find failed", __LINE__);
     test(ask_volume, ask_price, "find failed", __LINE__);
     
     //to to next collision bucket up and down and down into overflow buckets this time
     price--;
     ask_price++;
-    std::cout << "Finding Bid Price: " << price << " Volume: " << volume << std::endl;
+    std::cout << "Finding Bid Price: " << price << std::endl;
     test(order_book.find(BookType::Side::BID, price, volume), "find failed", __LINE__);
     test(volume, price, "find failed", __LINE__);
-    std::cout << "Finding Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
+    std::cout << "Finding Ask Price: " << ask_price << std::endl;
     test(order_book.find(BookType::Side::ASK, ask_price, ask_volume), "find failed", __LINE__);
     test(ask_volume, ask_price, "find failed", __LINE__);
     
     price = mid_price - ((fast_book_size / 2) * tick_size) - (3*fast_book_size * tick_size);
     ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1 + (3*fast_book_size * tick_size);
     ask_volume = ask_price;
-    std::cout << "Finding Bid Price: " << price << " Volume: " << volume << std::endl;
+    std::cout << "Finding Bid Price: " << price << std::endl;
     test(order_book.find(BookType::Side::BID, price, volume), "find failed", __LINE__);
     test(volume, price, "find failed", __LINE__);
-    std::cout << "Finding Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
+    std::cout << "Finding Ask Price: " << ask_price << std::endl;
     test(order_book.find(BookType::Side::ASK, ask_price, ask_volume), "find failed", __LINE__);
     test(ask_volume, ask_price, "find failed", __LINE__);
     
     //to to next collision bucket up and down into overflow buckets also
     price--;
     ask_price++;
-    std::cout << "Finding Bid Price: " << price << " Volume: " << volume << std::endl;
+    std::cout << "Finding Bid Price: " << price << std::endl;
     test(order_book.find(BookType::Side::BID, price, volume), "find failed", __LINE__);
     test(volume, price, "find failed", __LINE__);
     std::cout << "Finding Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
     test(order_book.find(BookType::Side::ASK, ask_price, ask_volume), "find failed", __LINE__);
     test(ask_volume, ask_price, "find failed", __LINE__);
+    
+    /*                  erase tests              */
+    std::cout << "Testing erase" << std::endl;
+    
+    //find in the middle of the book
+    price = mid_price;
+    ask_price = mid_price;
+    std::cout << "Eraseing Bid Price: " << price << std::endl;
+    test(order_book.erase(BookType::Side::BID, price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::BID, price), "find failed", __LINE__);
+    std::cout << "Eraseing Ask Price: " << ask_price << std::endl;
+    test(order_book.erase(BookType::Side::ASK, ask_price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::ASK, ask_price), "find failed", __LINE__);
+    
+    
+    price--;
+    test(order_book.erase(BookType::Side::BID, price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::BID, price), "find failed", __LINE__);
+    
+    price+=2;
+    test(order_book.erase(BookType::Side::ASK, price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::ASK, price), "find failed", __LINE__);
+    
+    price = mid_price - ((fast_book_size / 2) * tick_size);
+    std::cout << "Erasing Bid Price: " << price << std::endl;
+    test(order_book.erase(BookType::Side::BID, price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::BID, price), "find failed", __LINE__);
+    ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1;
+    std::cout << "Erasing Ask Price: " << ask_price << std::endl;
+    test(order_book.erase(BookType::Side::ASK, ask_price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::ASK, ask_price), "find failed", __LINE__);
+    
+    //to to next collision bucket up and down
+    price--;
+    ask_price++;
+    std::cout << "Erasing Bid Price: " << price << std::endl;
+    test(order_book.erase(BookType::Side::BID, price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::BID, price), "find failed", __LINE__);
+    
+    std::cout << "Erasing Ask Price: " << ask_price << std::endl;
+    test(order_book.erase(BookType::Side::ASK, ask_price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::ASK, ask_price), "find failed", __LINE__);
+    
+    price = mid_price - ((fast_book_size / 2) * tick_size) - (fast_book_size * tick_size);
+    ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1 + (fast_book_size * tick_size);
+    std::cout << "Erasing Bid Price: " << price << std::endl;
+    test(order_book.erase(BookType::Side::BID, price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::BID, price), "find failed", __LINE__);
+    std::cout << "Erasing Ask Price: " << ask_price << std::endl;
+    test(order_book.erase(BookType::Side::ASK, ask_price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::ASK, ask_price), "find failed", __LINE__);
+    
+    //to to next collision bucket up and down
+    price--;
+    ask_price++;
+    std::cout << "Erasing Bid Price: " << price << std::endl;
+    test(order_book.erase(BookType::Side::BID, price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::BID, price), "find failed", __LINE__);
+    std::cout << "Erasing Ask Price: " << ask_price << std::endl;
+    test(order_book.erase(BookType::Side::ASK, ask_price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::ASK, ask_price), "find failed", __LINE__);
+    
+    price = mid_price - ((fast_book_size / 2) * tick_size) - (2*fast_book_size * tick_size);
+    ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1 + (2*fast_book_size * tick_size);
+    std::cout << "Erasing Bid Price: " << price << std::endl;
+    test(order_book.erase(BookType::Side::BID, price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::BID, price), "find failed", __LINE__);
+    std::cout << "Erasing Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
+    test(order_book.erase(BookType::Side::ASK, ask_price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::ASK, ask_price), "find failed", __LINE__);
+    
+    //to to next collision bucket up and down and down into overflow buckets this time
+    price--;
+    ask_price++;
+    std::cout << "Erasing Bid Price: " << price << std::endl;
+    test(order_book.erase(BookType::Side::BID, price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::BID, price), "find failed", __LINE__);
+    std::cout << "Erasing Ask Price: " << ask_price << std::endl;
+    test(order_book.erase(BookType::Side::ASK, ask_price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::ASK, ask_price), "find failed", __LINE__);
+    
+    price = mid_price - ((fast_book_size / 2) * tick_size) - (3*fast_book_size * tick_size);
+    ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1 + (3*fast_book_size * tick_size);
+    ask_volume = ask_price;
+    std::cout << "Erasing Bid Price: " << price << std::endl;
+    test(order_book.erase(BookType::Side::BID, price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::BID, price), "find failed", __LINE__);
+    std::cout << "Erasing Ask Price: " << ask_price << std::endl;
+    test(order_book.erase(BookType::Side::ASK, ask_price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::ASK, ask_price), "find failed", __LINE__);
+    
+    //to to next collision bucket up and down into overflow buckets also
+    price--;
+    ask_price++;
+    std::cout << "Erasing Bid Price: " << price << std::endl;
+    test(order_book.erase(BookType::Side::BID, price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::BID, price), "find failed", __LINE__);
+    std::cout << "Erasing Ask Price: " << ask_price << std::endl;
+    test(order_book.erase(BookType::Side::ASK, ask_price), "erase failed", __LINE__);
+    test_failure(order_book.erase(BookType::Side::ASK, ask_price), "find failed", __LINE__);
     
     std::cout << "All tests passed" << std::endl << std::endl;
 }

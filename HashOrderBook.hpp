@@ -198,23 +198,36 @@ public:
         return collision_bucket < collision_buckets;
     }
     
-    /*constexpr std::pair<const Key&, const Value&> getBestBid() const noexcept
+    bool getBestBid(Key& key, Value& value)
     {
-        auto& key = _best_bid.value();
-        size_t hash, collision_bucket;
-        find value... don't want to keep copies of the value for quick lookup
+        auto k = _best_bid.value();
+        decltype(value) valout;
+        auto ok  = find(Side::BID, key, valout);
+        if(!ok)
+            return false;
         
+        key = k;
+        value = valout;
+        return true;
     }
     
-    constexpr const Value& getBestOffer() const noexcept
+    const Value& getBestOffer(Key& key, Value& value)
     {
-        return _best_offer.value();
+        auto k = _best_offer.value();
+        decltype(value) valout;
+        auto ok  = find(Side::ASK, key, valout);
+        if(!ok)
+            return false;
+        
+        key = k;
+        value = valout;
+        return true;
     }
     
     constexpr const Value& getMid() const noexcept
     {
         return _buckets[_current_mid_index].first_node.key;
-    }*/
+    }
     
     bool insert(Side side, Key&& key, Value&& value)
     {
