@@ -253,14 +253,14 @@ public:
         }
     }
     
-    bool find( const Key& key, Value& value)
+    bool find(Side side,  const Key& key, Value& value)
     {
         size_t hash, collision_bucket;
         hash_key(key, hash, collision_bucket);
         auto& bucket = _buckets[hash];
         
         bid_ask_node* node = nullptr;
-        if(collision_bucket > collision_buckets)  //if we are using overflow buckets? i.e. collison bucket is larget than the hardcoded allowed
+        if(collision_bucket >= collision_buckets)  //if we are using overflow buckets? i.e. collison bucket is larget than the hardcoded allowed
             node = _find_node(key, bucket.overflow_bucket); //it might be in overflow buckets
         else
         {
@@ -271,12 +271,12 @@ public:
         if(!node) //if we did find something in the collisin buckets. error
             return false;
         
-        if(node->bid_value.has_value())
+        if(side == Side::BID && node->bid_value.has_value())
         {
             value = node->bid_value.value();
             return true;
         }
-        else if(node->ask_value.has_value())
+        else if(side == Side::ASK && node->ask_value.has_value())
         {
             value = node->ask_value.value();
             return true;

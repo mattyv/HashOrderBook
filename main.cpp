@@ -7,8 +7,10 @@
 
 #include <iostream>
 #include "Tests.hpp"
+#include "Benchmark.hpp"
 
 int main(int argc, const char * argv[]) {
     RunTests();
+    RunBenchmarks();
     return 0;
 }
