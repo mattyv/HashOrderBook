@@ -60,6 +60,10 @@ potentially auto rehash on insert and maybe erase.
 Below is a simplified diagram of the blow code...
 ```
 //one collision bucket for easy drawing :)
-HashOrderBook<int, int, 1, 12, 1> book(100);
+HashOrderBook<int, int, 1, 13, 1> book(100);
 ```
 ![Diagram](HashOrderBook.png)
+
+### Memory usage
+The main fast book uses 696 bytes for an 8 bit key, 8 bit value type with 'fast book' of 10 and a 'collision buckets' of 3. 
+Total memory usage of the newly constructed book for this combination is 1,600 bytes.
