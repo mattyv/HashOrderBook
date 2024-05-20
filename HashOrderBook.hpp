@@ -240,16 +240,14 @@ public:
             bucket.nodes = std::make_unique<std::array<bid_ask_node, collision_buckets>>();
             bucket.overflow_bucket = std::make_unique<std::list<bid_ask_node>>();
         }
-        _size = 0; //todo: size will update on insert below. a little odd but ok for now. 
-        size_t count = 0;
+        _size = 0; //todo: size will update on _insert below. a little odd but ok for now.
         for(auto& bucket : _buckets) //extract each value from curret buckets and insert into new_buckets
         {
-            std::cout << "bucket: " << count++ << std::endl;
             //first node
             if(bucket.first_node.bid_value.has_value())
             {
                 auto& key = bucket.first_node.bid_value.value().first;
-                std::cout << "Bid key: " << key << std::endl;
+                //std::cout << "Bid key: " << key << std::endl;
                 auto& value = bucket.first_node.bid_value.value().second;
                 if(!_insert(Side::BID, std::move(key), std::move(value), new_buckets, hashing_mid_price))
                     throw std::runtime_error("Failed to insert into new buckets");
@@ -257,7 +255,7 @@ public:
             if(bucket.first_node.ask_value.has_value())
             {
                 auto& key = bucket.first_node.ask_value.value().first;
-                std::cout << "Ask key: " << key << std::endl;
+                //std::cout << "Ask key: " << key << std::endl;
                 auto& value = bucket.first_node.ask_value.value().second;
                 if(!_insert(Side::ASK, std::move(key), std::move(value), new_buckets, hashing_mid_price))
                     throw std::runtime_error("Failed to insert into new buckets");
@@ -269,7 +267,7 @@ public:
                 if(node.bid_value.has_value())
                 {
                     auto& key = node.bid_value.value().first;
-                    std::cout << "Bid key: " << key << std::endl;
+                    //std::cout << "Bid key: " << key << std::endl;
                     auto& value = node.bid_value.value().second;
                     if(!_insert(Side::BID, std::move(key), std::move(value), new_buckets, hashing_mid_price))
                         throw std::runtime_error("Failed to insert into new buckets");
@@ -277,7 +275,7 @@ public:
                 if(node.ask_value.has_value())
                 {
                     auto& key = node.ask_value.value().first;
-                    std::cout << "Ask key: " << key << std::endl;
+                    //std::cout << "Ask key: " << key << std::endl;
                     auto& value = node.ask_value.value().second;
                     if(!_insert(Side::ASK, std::move(key), std::move(value), new_buckets, hashing_mid_price))
                         throw std::runtime_error("Failed to insert into new buckets");
@@ -290,7 +288,7 @@ public:
                 if(node.bid_value.has_value())
                 {
                     auto& key = node.bid_value.value().first;
-                    std::cout << "Bid key: " << key << std::endl;
+                    //std::cout << "Bid key: " << key << std::endl;
                     auto& value = node.bid_value.value().second;
                     if(!_insert(Side::BID, std::move(key), std::move(value), new_buckets, hashing_mid_price))
                         throw std::runtime_error("Failed to insert into new buckets");
@@ -298,7 +296,7 @@ public:
                 if(node.ask_value.has_value())
                 {
                     auto& key = node.ask_value.value().first;
-                    std::cout << "Ask key: " << key << std::endl;
+                    //std::cout << "Ask key: " << key << std::endl;
                     auto& value = node.ask_value.value().second;
                     if(!_insert(Side::ASK, std::move(key), std::move(value), new_buckets, hashing_mid_price))
                         throw std::runtime_error("Failed to insert into new buckets");
