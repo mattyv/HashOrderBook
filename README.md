@@ -17,23 +17,33 @@ I don't want to explain what an order book is, but I like the concept of a conti
 ![Order Book](Orderbook.png)
 
 ### HashOrderBook design
-The idea here is to leverage some ideas from hash map. 
+The idea here is to leverage some ideas from hashmap. 
 Commonly a hashmap is implemented as a set of contiguous buckets, index-able from 0 to n. 
-Data is stored and retrieved by computing a hash on the key which indexs into the buckets. The trick is to wrap the hash at the length n by applying a modulo calculation on the hash before using it to index. 
+Data is stored and retrieved by computing a hash on the key which indexes into the buckets. The trick is to wrap the hash at the length n by applying a modulo calculation on the hash before using it to index. 
 Any buckets where the hash of two keys collides are chained together (in the case of std::unordered_map its a list. Other forms of hash maps can employ other mechanisms to deal with collisions).
 A hash map will also keep track of a load value, which is the number of items in the collection divided by the number of buckets.
-When a threshod on the load factor is crossed all items in the map are rehashed after extending the number of buckets.
+When a threshold on the load factor is crossed all items in the map are rehashed after extending the number of buckets.
 
-When a hash map wraps the index around on the bucket count, it loses something, which is the number of times this wrapping occurs. i.e. hash divided by bucket count. 
+When a hashmap wraps the index around on the bucket count, it loses something, which is the number of times this wrapping occurs. i.e. hash divided by bucket count. 
 
 The HashOrderBook takes from some of these concepts.
 It works in layers. Firstly it defines a static set of buckets called the 'fast book' size. Each bucket can contain a price & bid or offer quantity. 
-Each bucket also contains a pointer to a second smaller array called the 'collison buckets'. Typically this would be something like 2-4 in size and also allows price and bid and offer qty. 
-Finnaly each bucket contains a pointer to a list of buckets called the 'overflow buckets'. This is the last layer and provides a dynamic but slighly slower storage from the first two locations.
+Each bucket also contains a pointer to a second smaller array called the 'collision buckets'. Typically this would be something like 2-4 in size and also allows price and bid and offer qty. 
+Finally each bucket contains a pointer to a list of buckets called the 'overflow buckets'. This is the last layer and provides a dynamic but slightly slower storage from the first two locations.
 
-The HashOrderBook requires a mid point price when constructed and a tick size as a template argument.
-To index a value the hash is computed as a relative index in 'ticks' from the mid point price. E.e if the fast book size is say 10, and the mid point price is 100 the a insert of a Bid at price 103 is calculated to be an index of 8. i.e. 10 / 2 give the mid and (price - mid price) /tick size + mid gives 8.  
+```
+template<class Key, class Value, Key tick_size, size_t fast_book_size, size_t collision_buckets> 
+class HashOrderBook{
+public:
+   HashOrderBook(const Key& hashing_mid_price)
+};
+```
+The HashOrderBook requires a midpoint price when constructed and a tick size as a template argument.
+To index a value the hash is computed as a relative index in 'ticks' from the midpoint price. E.e if the fast book size is say 10, and the midpoint price is 100 and the insert of a Bid at price 103 is calculated to be an index of 8. i.e. 10 / 2 give the mid and (price - mid price) /tick size + mid gives 8.  
 
 
 
 ![Diagram](HashOrderBook.png)
+
+
+
