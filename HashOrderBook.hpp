@@ -240,7 +240,7 @@ public:
             bucket.nodes = std::make_unique<std::array<bid_ask_node, collision_buckets>>();
             bucket.overflow_bucket = std::make_unique<std::list<bid_ask_node>>();
         }
-        
+        _size = 0; //todo: size will update on insert below. a little odd but ok for now. 
         size_t count = 0;
         for(auto& bucket : _buckets) //extract each value from curret buckets and insert into new_buckets
         {
@@ -359,8 +359,6 @@ private:
         size_t hash, collision_bucket; //collision bucket of 0 means we are looking in the "first node". Should give us better cache performance
         _hash_key(side, key, hash, collision_bucket, hashing_mid_price);
         auto& bucket = buckets[hash];
-        
-        std::cout << "hash: " << hash << " collision_bucket: " << collision_bucket << std::endl;
         
         bid_ask_node* node = nullptr;
           

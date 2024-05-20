@@ -1,10 +1,10 @@
 What size are things?...
-size of bid_ask_node: 40
-size of collision_bucket: 56
-size of overflow_bucket_type: 56
-size of bucket_type: 560
-Size of static order_book: 624 bytes. Or 4 cache lines.
-Total order_book size: 1760 bytes. Or 13 cache lines
+size of bid_ask_node: 48
+size of collision_bucket: 64
+size of overflow_bucket_type: 64
+size of bucket_type: 640
+Size of static order_book: 696 bytes. Or 5 cache lines.
+Total order_book size: 1600 bytes. Or 12 cache lines
 
 Running tests...
 Testing hashing...
@@ -32,231 +32,81 @@ Inserting Bid Price: 74 Volume: 74
 Inserting Ask Price: 145 Volume: 145
 Inserts passed
 Testing find
-Finding Bid Price: 110 Volume: 74
-Finding Ask Price: 110 Volume: 145
-Finding Bid Price: 105 Volume: 109
-Finding Ask Price: 114 Volume: 111
-Finding Bid Price: 104 Volume: 105
-Finding Ask Price: 115 Volume: 114
-Finding Bid Price: 95 Volume: 104
-Finding Ask Price: 124 Volume: 115
-Finding Bid Price: 94 Volume: 95
-Finding Ask Price: 125 Volume: 124
-Finding Bid Price: 85 Volume: 94
-Finding Ask Price: 134 Volume: 125
-Finding Bid Price: 84 Volume: 85
-Finding Ask Price: 135 Volume: 134
-Finding Bid Price: 75 Volume: 84
-Finding Ask Price: 144 Volume: 144
-Finding Bid Price: 74 Volume: 75
+Finding Bid Price: 110
+Finding Ask Price: 110
+Finding Bid Price: 105
+Finding Ask Price: 114
+Finding Bid Price: 104
+Finding Ask Price: 115
+Finding Bid Price: 95
+Finding Ask Price: 124
+Finding Bid Price: 94
+Finding Ask Price: 125
+Finding Bid Price: 85
+Finding Ask Price: 134
+Finding Bid Price: 84
+Finding Ask Price: 135
+Finding Bid Price: 75
+Finding Ask Price: 144
+Finding Bid Price: 74
 Finding Ask Price: 145 Volume: 144
+Testing rehash
+bucket: 0
+Bid key: 105
+Bid key: 95
+Ask key: 115
+Bid key: 85
+Ask key: 125
+Ask key: 135
+Bid key: 75
+Ask key: 145
+bucket: 1
+bucket: 2
+bucket: 3
+bucket: 4
+Bid key: 109
+bucket: 5
+Bid key: 110
+Ask key: 110
+bucket: 6
+Ask key: 111
+bucket: 7
+bucket: 8
+bucket: 9
+Ask key: 114
+Bid key: 104
+Ask key: 124
+Bid key: 94
+Ask key: 134
+Bid key: 84
+Ask key: 144
+Bid key: 74
+Testing erase
+Eraseing Bid Price: 110
+Eraseing Ask Price: 110
+Erasing Bid Price: 105
+Erasing Ask Price: 114
+Erasing Bid Price: 104
+Erasing Ask Price: 115
+Erasing Bid Price: 95
+Erasing Ask Price: 124
+Erasing Bid Price: 94
+Erasing Ask Price: 125
+Erasing Bid Price: 85
+Erasing Ask Price: 134
+Erasing Bid Price: 84
+Erasing Ask Price: 135
+Erasing Bid Price: 75
+Erasing Ask Price: 144
+Erasing Bid Price: 74
+Erasing Ask Price: 145
 All tests passed
 
 Running benchmarks...
-109
-110
-109
-109
-109
-109
-110
-112
-111
-153
-109
-109
-109
-111
-109
-110
-109
-112
-109
-110
-110
-110
-110
-142
-110
-109
-107
-110
-110
-109
-103
-110
-112
-112
-108
-110
-110
-110
-192
-110
-109
-125
-107
-112
-109
-109
-111
-107
-110
-110
-113
-110
-110
-111
-107
-108
-110
-110
-180
-108
-70
-110
-110
-110
-192
-109
-110
-111
-61
-111
-110
-111
-111
-163
-110
-111
-125
-110
-110
-109
-111
-111
-108
-108
-110
-109
-109
-108
-135
-111
-110
-109
-111
-111
-110
-110
-111
-111
-112
-110
-110
-110
-110
-111
-111
-111
-113
-109
-107
-109
-27
-112
-109
-109
-112
-108
-111
-108
-110
-109
-109
-111
-110
-110
-113
-109
-119
-108
-109
-111
-111
-111
-109
-110
-110
-111
-110
-107
-114
-110
-111
-190
-110
-111
-1
-109
-110
-111
-109
-112
-108
-101
-110
-109
-111
-110
-108
-111
-112
-113
-112
-112
-110
-112
-110
-127
-110
-111
-176
-109
-110
-110
-110
-109
-110
-111
-111
-110
-112
-110
-109
-108
-112
-177
-110
-110
-109
-61
-112
-112
-111
-111
-110
-110
-110
-107
-105
-112
-112
-110
-Map insert time: 3458ns
-Book insert time: 1458ns
-Map find time: 2167ns
-Book find time: 584ns
-Map erase time: 2625ns
-Book erase time: 917ns
+Map insert time: 3000ns
+Book insert time: 1333ns
+Map find time: 1584ns
+Book find time: 959ns
+Map erase time: 3125ns
+Book erase time: 1167ns
 Program ended with exit code: 0
