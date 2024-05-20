@@ -147,80 +147,80 @@ static void RunTests()
     test(BookType::collision_buckets_val, collision_buckets, "collision_buckets_val failed", __LINE__);
     
     size_t hash, collision_bucket;
-    order_book.hash_key(mid_price, hash, collision_bucket);
+    order_book.hash_key(BookType::Side::ASK , mid_price, hash, collision_bucket);
     test(hash, 5ul, "hash_key failed", __LINE__);
     test(collision_bucket, 0ul, "hash_key failed", __LINE__);
     
     //should yield last index on zero'th collision bucket
     size_t price = mid_price + ((fast_book_size / 2) * tick_size) -1;
-    test(order_book.hash_key(price, hash, collision_bucket),"hash_key failed", __LINE__);
+    test(order_book.hash_key(BookType::Side::ASK ,price, hash, collision_bucket),"hash_key failed", __LINE__);
     test(hash, 9ul, "hash_key failed", __LINE__);
     test(collision_bucket, 0ul, "hash_key failed", __LINE__);
     
     //should yield first index on first collision bucket;
-    test(order_book.hash_key(price + 1, hash, collision_bucket),"hash_key failed", __LINE__);
+    test(order_book.hash_key(BookType::Side::ASK ,price + 1, hash, collision_bucket),"hash_key failed", __LINE__);
     test(hash, 0ul, "hash_key failed", __LINE__);
     test(collision_bucket, 1ul, "hash_key failed", __LINE__);
     
     //should yield last index on first collision bucket
     price += fast_book_size * tick_size;
-    test(order_book.hash_key(price, hash, collision_bucket),"hash_key failed", __LINE__);
+    test(order_book.hash_key(BookType::Side::ASK , price, hash, collision_bucket),"hash_key failed", __LINE__);
     test(hash, 9ul, "hash_key failed", __LINE__);
     test(collision_bucket, 1ul, "hash_key failed", __LINE__);
     
     //should yield first index on second collision bucket
-    test_failure(order_book.hash_key(price +1, hash, collision_bucket), "hash_key failed", __LINE__);
+    test_failure(order_book.hash_key(BookType::Side::ASK, price +1, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 0ul, "hash_key failed", __LINE__);
     test(collision_bucket, 2ul, "hash_key failed", __LINE__);
     
     //should yield last index on second collision bucket
     price += fast_book_size * tick_size;
-    test_failure(order_book.hash_key(price, hash, collision_bucket), "hash_key failed", __LINE__);
+    test_failure(order_book.hash_key(BookType::Side::ASK, price, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 9ul, "hash_key failed", __LINE__);
     test(collision_bucket, 2ul, "hash_key failed", __LINE__);
     
     //should yield first index on third collision bucket and show that its now full and should use overflow
-    test_failure(order_book.hash_key(price +1, hash, collision_bucket), "hash_key failed", __LINE__);
+    test_failure(order_book.hash_key(BookType::Side::ASK, price +1, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 0ul, "hash_key failed", __LINE__);
     test(collision_bucket, 3ul, "hash_key failed", __LINE__);
     
     //test the keys lower than mid
     price = mid_price - ((fast_book_size / 2) * tick_size);
-    test(order_book.hash_key(price, hash, collision_bucket), "hash_key failed", __LINE__);
+    test(order_book.hash_key(BookType::Side::BID, price, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 0ul, "hash_key failed", __LINE__);
     test(collision_bucket, 0ul, "hash_key failed", __LINE__);
     
-    test(order_book.hash_key(price -1, hash, collision_bucket), "hash_key failed", __LINE__);
+    test(order_book.hash_key(BookType::Side::BID, price -1, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 9ul, "hash_key failed", __LINE__);
     test(collision_bucket, 1ul, "hash_key failed", __LINE__);
     
     price -= fast_book_size * tick_size;
-    test(order_book.hash_key(price, hash, collision_bucket), "hash_key failed", __LINE__);
+    test(order_book.hash_key(BookType::Side::BID, price, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 0ul, "hash_key failed", __LINE__);
     test(collision_bucket, 1ul, "hash_key failed", __LINE__);
     
-    test(order_book.hash_key(price +1, hash, collision_bucket), "hash_key failed", __LINE__);
+    test(order_book.hash_key(BookType::Side::BID, price +1, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 1ul, "hash_key failed", __LINE__);
     test(collision_bucket, 1ul, "hash_key failed", __LINE__);
     
-    test_failure(order_book.hash_key(price -1, hash, collision_bucket), "hash_key failed", __LINE__);
+    test_failure(order_book.hash_key(BookType::Side::BID, price -1, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 9ul, "hash_key failed", __LINE__);
     test(collision_bucket, 2ul, "hash_key failed", __LINE__);
     
-    test_failure(order_book.hash_key(price -2, hash, collision_bucket), "hash_key failed", __LINE__);
+    test_failure(order_book.hash_key(BookType::Side::BID, price -2, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 8ul, "hash_key failed", __LINE__);
     test(collision_bucket, 2ul, "hash_key failed", __LINE__);
     
     price -= fast_book_size * tick_size;
-    test_failure(order_book.hash_key(price, hash, collision_bucket), "hash_key failed", __LINE__);
+    test_failure(order_book.hash_key(BookType::Side::BID, price, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 0ul, "hash_key failed", __LINE__);
     test(collision_bucket, 2ul, "hash_key failed", __LINE__);
     
-    test_failure(order_book.hash_key(price -1, hash, collision_bucket), "hash_key failed", __LINE__);
+    test_failure(order_book.hash_key(BookType::Side::BID, price -1, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 9ul, "hash_key failed", __LINE__);
     test(collision_bucket, 3ul, "hash_key failed", __LINE__);
     
-    test_failure(order_book.hash_key(price -1, hash, collision_bucket), "hash_key failed", __LINE__);
+    test_failure(order_book.hash_key(BookType::Side::BID, price -1, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 9ul, "hash_key failed", __LINE__);
     test(collision_bucket, 3ul, "hash_key failed", __LINE__);
     
@@ -508,7 +508,7 @@ static void RunTests()
     std::cout << "Erasing Bid Price: " << price << std::endl;
     test(order_book.erase(BookType::Side::BID, price), "erase failed", __LINE__);
     test_failure(order_book.erase(BookType::Side::BID, price), "find failed", __LINE__);
-    std::cout << "Erasing Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
+    std::cout << "Erasing Ask Price: " << ask_price << std::endl;
     test(order_book.erase(BookType::Side::ASK, ask_price), "erase failed", __LINE__);
     test_failure(order_book.erase(BookType::Side::ASK, ask_price), "find failed", __LINE__);
     

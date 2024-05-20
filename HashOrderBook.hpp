@@ -43,21 +43,28 @@ public:
 private:
     struct bid_ask_node
     {
-        std::optional<Key> key;
-        std::optional<Value> bid_value;
-        std::optional<Value> ask_value;
+        std::optional<std::pair<Key, Value>> bid_value;
+        std::optional<std::pair<Key, Value>> ask_value;
         
         bid_ask_node() = default;
-        bid_ask_node(const Key& key, const Value& value, Side side)
-        : key(key)
+        
+        bid_ask_node(Key&& key, Value&& value, Side side)
         {
             if(side == Side::BID)
-                bid_value = value;
+            {
+                decltype(bid_value) new_node({std::move(key), std::move(value)});
+                bid_value = std::move(new_node);
+            }
             else
-                ask_value = value;
+            {
+                decltype(ask_value) new_node({std::move(key), std::move(value)});
+                ask_value = std::move(new_node);
+            }
         }
         bid_ask_node(const bid_ask_node& other) = default;
         ~bid_ask_node() = default;
+        bid_ask_node& operator=(const bid_ask_node& other) = default;
+        bid_ask_node& operator=(bid_ask_node&& other) = default;
     };
     
 
@@ -112,28 +119,47 @@ private:
     }
 
     
-    bid_ask_node* _find_node(const Key& key, typename collision_bucket_type::overflow_bucket_type& overflow_bucket) noexcept
+    bid_ask_node* _find_node(Side side, const Key& key, typename collision_bucket_type::overflow_bucket_type& overflow_bucket) noexcept
     {
         for(auto& node : *overflow_bucket)
         {
-            if(node.key == key)
+            if(side == Side::BID && node.bid_value.has_value())
             {
-                return &node;
+                if(node.bid_value.value().first == key)
+                    return &node;
+            }
+            else if(side == Side::ASK && node.ask_value.has_value())
+            {
+                if(node.ask_value.value().first == key)
+                    return &node;
             }
         }
         return nullptr;
     }
     
-    bool _erase_node(const Key& key, typename collision_bucket_type::overflow_bucket_type& overflow_bucket) noexcept
+    bool _erase_node(Side side, const Key& key, typename collision_bucket_type::overflow_bucket_type& overflow_bucket) noexcept
     {
         for(auto it = overflow_bucket->begin(); it != overflow_bucket->end(); ++it)
         {
-            if(it->key == key)
+            bool found = false;
+            if(side == Side::BID && it->bid_value.has_value() && it->bid_value.value().first == key)
             {
-                overflow_bucket->erase(it);
+                it->bid_value.reset();
+                found = true;
                 --_size;
-                return true;
             }
+            else if(side == Side::ASK && it->ask_value.has_value() && it->ask_value.value().first == key)
+            {
+                it->ask_value.reset();
+                found = true;
+                --_size;
+            }
+                
+            if(!it->bid_value.has_value() && !it->ask_value.has_value())
+                overflow_bucket->erase(it);
+            
+            return found;
+        
         }
         return false;
     }
@@ -156,7 +182,7 @@ private:
         {
             const auto new_mid = (_best_bid.value() + _best_offer.value()) / 2;
             size_t hash, collision_bucket;
-            hash_key(new_mid, hash, collision_bucket);
+            hash_key(side, new_mid, hash, collision_bucket);
             if(collision_bucket > 0) //if it moves to far its a wrap around. not sure what to do yet. lets come back to this.
                 throw std::runtime_error("Massive mid point move! Untested functionality!");
             _current_mid_index = hash;
@@ -164,24 +190,31 @@ private:
         else if(bid_change && _best_bid.has_value() )
         {
             size_t hash, collision_bucket;
-            hash_key(_best_bid.value(), hash, collision_bucket);
+            hash_key(side, _best_bid.value(), hash, collision_bucket);
             _current_mid_index = hash;
         }
         else if(offer_change && _best_offer.has_value())
         {
             size_t hash, collision_bucket;
-            hash_key(_best_offer.value(), hash, collision_bucket);
+            hash_key(side, _best_offer.value(), hash, collision_bucket);
             _current_mid_index = hash;
         }
     }
     
     //calculates the hash based on an offset from the mid and the size of the array
-    constexpr bool _hash_key(const Key& key, size_t& hash, size_t& collision_bucket, const size_t& hashing_mid_price) const
+    constexpr bool _hash_key(Side side, const Key& key, size_t& hash, size_t& collision_bucket, const size_t& hashing_mid_price) const
     {
         const long mid = fast_book_size / 2;
         const long offset_in_ticks = (key - hashing_mid_price) / tick_size; //can be -ve
         const long index = mid + offset_in_ticks; //can be -ve
         hash = _positiveMod(index, fast_book_size); //must always be +ve
+        if((side == Side::BID && index > static_cast<long>(fast_book_size))
+           ||
+           (side == Side::ASK && index < 0))
+        {
+            collision_bucket = collision_buckets + 1; //if the price is wrapping too high or too low
+            return false; //we use the collision buckets to store these as the nodes are reserved for lower bid or higher asks
+        }
         collision_bucket = _calc_collision_bucket(index, fast_book_size); //also must be +ve
         return collision_bucket < collision_buckets;
     }
@@ -208,20 +241,26 @@ public:
             bucket.overflow_bucket = std::make_unique<std::list<bid_ask_node>>();
         }
         
-        for(auto& bucket : _buckets) //extract each valeu from curret buckets and insert into new_buckets
+        size_t count = 0;
+        for(auto& bucket : _buckets) //extract each value from curret buckets and insert into new_buckets
         {
+            std::cout << "bucket: " << count++ << std::endl;
             //first node
             if(bucket.first_node.bid_value.has_value())
             {
-                auto& key = bucket.first_node.key.value();
-                auto& value = bucket.first_node.bid_value.value();
-                _insert(Side::BID, std::move(key), std::move(value), new_buckets, hashing_mid_price);
+                auto& key = bucket.first_node.bid_value.value().first;
+                std::cout << "Bid key: " << key << std::endl;
+                auto& value = bucket.first_node.bid_value.value().second;
+                if(!_insert(Side::BID, std::move(key), std::move(value), new_buckets, hashing_mid_price))
+                    throw std::runtime_error("Failed to insert into new buckets");
             }
             if(bucket.first_node.ask_value.has_value())
             {
-                auto& key = bucket.first_node.key.value();
-                auto& value = bucket.first_node.ask_value.value();
-                _insert(Side::ASK, std::move(key), std::move(value), new_buckets, hashing_mid_price);
+                auto& key = bucket.first_node.ask_value.value().first;
+                std::cout << "Ask key: " << key << std::endl;
+                auto& value = bucket.first_node.ask_value.value().second;
+                if(!_insert(Side::ASK, std::move(key), std::move(value), new_buckets, hashing_mid_price))
+                    throw std::runtime_error("Failed to insert into new buckets");
             }
             
             //iterate over nodes
@@ -229,15 +268,19 @@ public:
             {
                 if(node.bid_value.has_value())
                 {
-                    auto& key = node.key.value();
-                    auto& value = node.bid_value.value();
-                    _insert(Side::BID, std::move(key), std::move(value), new_buckets, hashing_mid_price);
+                    auto& key = node.bid_value.value().first;
+                    std::cout << "Bid key: " << key << std::endl;
+                    auto& value = node.bid_value.value().second;
+                    if(!_insert(Side::BID, std::move(key), std::move(value), new_buckets, hashing_mid_price))
+                        throw std::runtime_error("Failed to insert into new buckets");
                 }
                 if(node.ask_value.has_value())
                 {
-                    auto& key = node.key.value();
-                    auto& value = node.ask_value.value();
-                    _insert(Side::ASK, std::move(key), std::move(value), new_buckets, hashing_mid_price);
+                    auto& key = node.ask_value.value().first;
+                    std::cout << "Ask key: " << key << std::endl;
+                    auto& value = node.ask_value.value().second;
+                    if(!_insert(Side::ASK, std::move(key), std::move(value), new_buckets, hashing_mid_price))
+                        throw std::runtime_error("Failed to insert into new buckets");
                 }
             }
             
@@ -246,15 +289,19 @@ public:
             {
                 if(node.bid_value.has_value())
                 {
-                    auto& key = node.key.value();
-                    auto& value = node.bid_value.value();
-                    _insert(Side::BID, std::move(key), std::move(value), new_buckets, hashing_mid_price);
+                    auto& key = node.bid_value.value().first;
+                    std::cout << "Bid key: " << key << std::endl;
+                    auto& value = node.bid_value.value().second;
+                    if(!_insert(Side::BID, std::move(key), std::move(value), new_buckets, hashing_mid_price))
+                        throw std::runtime_error("Failed to insert into new buckets");
                 }
                 if(node.ask_value.has_value())
                 {
-                    auto& key = node.key.value();
-                    auto& value = node.ask_value.value();
-                    _insert(Side::ASK, std::move(key), std::move(value), new_buckets, hashing_mid_price);
+                    auto& key = node.ask_value.value().first;
+                    std::cout << "Ask key: " << key << std::endl;
+                    auto& value = node.ask_value.value().second;
+                    if(!_insert(Side::ASK, std::move(key), std::move(value), new_buckets, hashing_mid_price))
+                        throw std::runtime_error("Failed to insert into new buckets");
                 }
             }
         }
@@ -266,12 +313,13 @@ public:
             _buckets[i].nodes = std::move(new_buckets[i].nodes);
             _buckets[i].overflow_bucket = std::move(new_buckets[i].overflow_bucket);
         }
+        _hashing_mid_price = hashing_mid_price;
     }
     
     //calculates the hash based on an offset from the mid and the size of the array
-    constexpr bool hash_key(const Key& key, size_t& hash, size_t& collision_bucket) const
+    constexpr bool hash_key(Side side, const Key& key, size_t& hash, size_t& collision_bucket) const
     {
-        return _hash_key(key, hash, collision_bucket, _hashing_mid_price);
+        return _hash_key(side, key, hash, collision_bucket, _hashing_mid_price);
     }
     
     bool getBestBid(Key& key, Value& value)
@@ -309,8 +357,10 @@ private:
     bool _insert(Side side, Key&& key, Value&& value, bucket_type& buckets, size_t& hashing_mid_price)
     {
         size_t hash, collision_bucket; //collision bucket of 0 means we are looking in the "first node". Should give us better cache performance
-        _hash_key(key, hash, collision_bucket, hashing_mid_price);
+        _hash_key(side, key, hash, collision_bucket, hashing_mid_price);
         auto& bucket = buckets[hash];
+        
+        std::cout << "hash: " << hash << " collision_bucket: " << collision_bucket << std::endl;
         
         bid_ask_node* node = nullptr;
           
@@ -335,7 +385,7 @@ private:
         }
         else//if we are using overflow buckets? i.e. collison bucket is larger than the hardcoded allowed
         {
-            node = _find_node(key, bucket.overflow_bucket); //it might be in overflow buckets
+            node = _find_node(side, key, bucket.overflow_bucket); //it might be in overflow buckets
             if(!node)
             {
                 bucket.overflow_bucket->emplace_back(bid_ask_node(std::move(key), std::move(value), side));
@@ -347,16 +397,16 @@ private:
                 const bool has_value = node->bid_value.has_value();
                 if(has_value)
                     return false;
-                node->key = std::move(key);
-                node->bid_value = std::move(value);
+                node->bid_value.value().first = std::move(key);
+                node->bid_value.value().second = std::move(value);
             }
             else if(side == Side::ASK)
             {
                 const bool has_value = node->ask_value.has_value();
                 if(has_value)
                     return false;
-                node->key = std::move(key);
-                node->ask_value = std::move(value);
+                node->ask_value.value().first = std::move(key);
+                node->ask_value.value().second = std::move(value);
             }
             else
                 return false;
@@ -373,11 +423,10 @@ private:
         
         if(value_ptr->has_value()) //we already have a value! so is error
             return false;
-
         else
         {
-            node->key = std::move(key);
-            *value_ptr = std::move(value);
+            decltype(node->bid_value) new_value({std::move(key), std::move(value)});
+            *value_ptr = std::move(new_value);
             _update_bbo_and_mid(side, key);
             ++_size;
             return true;
@@ -393,7 +442,7 @@ public:
     bool find(Side side, const Key& key, Value& value)
     {
         size_t hash, collision_bucket;
-        hash_key(key, hash, collision_bucket);
+        hash_key(side, key, hash, collision_bucket);
         auto& bucket = _buckets[hash];
         
         bid_ask_node* node = nullptr;
@@ -418,19 +467,23 @@ public:
             node = &nodes[collision_bucket_index];
         }
         else//if we are using overflow buckets? i.e. collison bucket is larget than the hardcoded allowed
-            node = _find_node(key, bucket.overflow_bucket); //it might be in overflow buckets
+            node = _find_node(side, key, bucket.overflow_bucket); //it might be in overflow buckets
         
         if(!node) //if we did find something in the collisin buckets. error
             return false;
         
         if(side == Side::BID && node->bid_value.has_value())
         {
-            value = node->bid_value.value();
+            if(key != node->bid_value.value().first)
+                throw std::runtime_error("key mismatch");
+            value = node->bid_value.value().second;
             return true;
         }
         else if(side == Side::ASK && node->ask_value.has_value())
         {
-            value = node->ask_value.value();
+            if(key != node->ask_value.value().first)
+                throw std::runtime_error("key mismatch");
+            value = node->ask_value.value().second;
             return true;
         }
         return false;
@@ -439,18 +492,34 @@ public:
     bool erase(Side side, const Key& key)
     {
         size_t hash, collision_bucket;
-        hash_key(key, hash, collision_bucket);
+        hash_key(side, key, hash, collision_bucket);
         auto& bucket = _buckets[hash];
         
         bid_ask_node* node = nullptr;
-        if(collision_bucket >= collision_buckets)  //if we are using overflow buckets? i.e. collison bucket is larget than the hardcoded allowed
+        
+        if(collision_bucket == 0) //we're looking in "first_node"
         {
-            return _erase_node(key, bucket.overflow_bucket); //it might be in overflow buckets
+            bool occupied = false;
+            if(side == Side::BID)
+                occupied = bucket.first_node.bid_value.has_value();
+            else
+                occupied = bucket.first_node.ask_value.has_value();
+            
+            if(!occupied)
+                return false;
+            
+            node = &bucket.first_node;
         }
-        else
+        
+        else if(collision_bucket -1 < collision_buckets)//were looknig in nodes.
         {
             auto& nodes = *bucket.nodes;
-            node = &nodes[collision_bucket];
+            const size_t collision_bucket_index = collision_bucket - 1;
+            node = &nodes[collision_bucket_index];
+        }
+        else//if we are using overflow buckets? i.e. collison bucket is larget than the hardcoded allowed
+        {
+            return _erase_node(side, key, bucket.overflow_bucket); //it might be in overflow buckets
         }
         
         if(!node) //if we did find something in the collisin buckets. error
@@ -458,12 +527,18 @@ public:
         
         if(side == Side::BID && node->bid_value.has_value())
         {
+            if(key != node->bid_value.value().first)
+                throw std::runtime_error("key mismatch");
+            
             node->bid_value.reset();
             --_size;
             return true;
         }
         else if(side == Side::ASK && node->ask_value.has_value())
         {
+            if(key != node->ask_value.value().first)
+                throw std::runtime_error("key mismatch");
+            
             node->ask_value.reset();
             --_size;
             return true;
