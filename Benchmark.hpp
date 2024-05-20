@@ -55,10 +55,12 @@ static void RunBenchmarks()
         keys.push_back(key);
     }
     
-    for(auto key: keys)
+    
+    //print keys
+    /*for(auto key: keys)
     {
         std::cout << key << std::endl;
-    }
+    }*/
     
     // Insert keys into the book
     std::map<size_t, size_t> book_map;

@@ -123,7 +123,7 @@ static void test_failure(bool condition, const char* message, int line)
 static void RunTests()
 {
     // tick sizse of 1, fast book of 10, 3 collision buckets, max 3 overflow buckets
-    const size_t fast_book_size = 10, tick_size = 1, collision_buckets = 3, mid_price = 110;
+    const size_t fast_book_size = 10, tick_size = 1, collision_buckets = 2, mid_price = 110;
     using BookType = HashOrderBook<size_t, size_t, tick_size, fast_book_size, collision_buckets>;
     BookType order_book(mid_price);
     std::cout << "What size are things?..." << std::endl;
@@ -169,13 +169,13 @@ static void RunTests()
     test(collision_bucket, 1ul, "hash_key failed", __LINE__);
     
     //should yield first index on second collision bucket
-    test(order_book.hash_key(price +1, hash, collision_bucket), "hash_key failed", __LINE__);
+    test_failure(order_book.hash_key(price +1, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 0ul, "hash_key failed", __LINE__);
     test(collision_bucket, 2ul, "hash_key failed", __LINE__);
     
     //should yield last index on second collision bucket
     price += fast_book_size * tick_size;
-    test(order_book.hash_key(price, hash, collision_bucket), "hash_key failed", __LINE__);
+    test_failure(order_book.hash_key(price, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 9ul, "hash_key failed", __LINE__);
     test(collision_bucket, 2ul, "hash_key failed", __LINE__);
     
@@ -203,16 +203,16 @@ static void RunTests()
     test(hash, 1ul, "hash_key failed", __LINE__);
     test(collision_bucket, 1ul, "hash_key failed", __LINE__);
     
-    test(order_book.hash_key(price -1, hash, collision_bucket), "hash_key failed", __LINE__);
+    test_failure(order_book.hash_key(price -1, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 9ul, "hash_key failed", __LINE__);
     test(collision_bucket, 2ul, "hash_key failed", __LINE__);
     
-    test(order_book.hash_key(price -2, hash, collision_bucket), "hash_key failed", __LINE__);
+    test_failure(order_book.hash_key(price -2, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 8ul, "hash_key failed", __LINE__);
     test(collision_bucket, 2ul, "hash_key failed", __LINE__);
     
     price -= fast_book_size * tick_size;
-    test(order_book.hash_key(price, hash, collision_bucket), "hash_key failed", __LINE__);
+    test_failure(order_book.hash_key(price, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 0ul, "hash_key failed", __LINE__);
     test(collision_bucket, 2ul, "hash_key failed", __LINE__);
     
@@ -336,6 +336,8 @@ static void RunTests()
     test(order_book.insert(BookType::Side::ASK, std::move(ask_price), std::move(ask_volume)), "insert failed", __LINE__);
     test_failure(order_book.insert(BookType::Side::ASK, std::move(ask_price), std::move(ask_volume)), "insert failed", __LINE__);
     
+    test(order_book.size(), 20ul, "insert failed", __LINE__);
+    
     std::cout << "Inserts passed" << std::endl;
     
     /*                  find tests              */
@@ -434,6 +436,11 @@ static void RunTests()
     std::cout << "Finding Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
     test(order_book.find(BookType::Side::ASK, ask_price, ask_volume), "find failed", __LINE__);
     test(ask_volume, ask_price, "find failed", __LINE__);
+    
+    /*                  test rehash             */
+    std::cout << "Testing rehash" << std::endl;
+    order_book.rehash(mid_price + (fast_book_size * tick_size));
+    
     
     /*                  erase tests              */
     std::cout << "Testing erase" << std::endl;
@@ -534,6 +541,8 @@ static void RunTests()
     std::cout << "Erasing Ask Price: " << ask_price << std::endl;
     test(order_book.erase(BookType::Side::ASK, ask_price), "erase failed", __LINE__);
     test_failure(order_book.erase(BookType::Side::ASK, ask_price), "find failed", __LINE__);
+    
+    test(order_book.size(), 0ul, "size failed", __LINE__);
     
     std::cout << "All tests passed" << std::endl << std::endl;
 }
