@@ -1,5 +1,5 @@
 # HashOrderBook (Concept / Work in progress)
-Here this project having a go at tackling some of the data challenges of the financial markets 'order book' directly. Rather than using existing associative containers from C++ standard template library, we look to create something bespoke which fulfils the needs of the concept directly to avoid any pitfalls or generalized implementation.
+Here this project attempts to tackle some of the data challenges of the financial markets 'order book' directly. Rather than using existing associative containers from C++ standard template library, it looks to create something bespoke which fulfils the needs of the concept directly to avoid any pitfalls or generalized implementation.
 
 ### What are the needs & challenges
  1 - Order retrieval. Other data structures (e.g. std::map) support this though the penalty is on tree traversal on insert/update/delete with O(log n) complexity.
@@ -20,7 +20,7 @@ I don't want to explain what an order book is, but I like the concept of a conti
 The idea here is to leverage some ideas from hashmap. 
 Commonly a hashmap is implemented as a set of contiguous buckets which can be indexed from 0 to n. 
 Data is stored and retrieved by computing a hash on the key which indexes into the buckets. The trick is to wrap the hash at the length n by applying a modulo calculation on the hash before using it to index. 
-Any buckets where the hash of two keys collides both entries are stored on the same but but are chained together (in the case of std::unordered_map it's a list. Other forms of hash maps can employ other mechanisms to deal with collisions).
+Any buckets where the hash of two keys collides both entries are stored on the same but are chained together (in the case of std::unordered_map it's a list. Other forms of hash maps can employ other mechanisms to deal with collisions).
 A hash map will also keep track of a load value, which is the number of items in the collection divided by the number of buckets.
 When a threshold on the load factor is crossed all items in the map are rehashed after extending the number of buckets.
 
@@ -50,7 +50,7 @@ If the collision index is greater than collision_buckets it will use the 'overfl
 This way the prices closest to the midpoint price are fastest to access.
 
 There is one caveat in that the layered approach is only reserved for prices which are 'worse' than the mid (bid - lower prices, ask - higher prices). If a bid price goes high and wraps around it goes straight to using the 'overflow buckets'. Same for the lower ask prices which wrap. 
-Via this mechanism the collection support quick large moves and crossed order books. But in the case of large moves the collection should be rehashed.
+Via this mechanism the collection supports quick large moves and crossed order books. But in the case of large moves the collection should be rehashed.
 
 
 
@@ -59,17 +59,47 @@ Rehashing involves using a new midpoint price to generate new index values for h
 ### Todo
 potentially auto rehash on insert and maybe erase.
 ### Memory usage
-Below is an attempt to diagram a real-life exampe based off the blow code...
+Below is an attempt to diagram a real-life example based on the blow code...
 ```
 HashOrderBook<int, int, 1, 10, 2> book(100);
 ```
 ![Diagram](OrderBookRealLifeExample.png)
 
 
-You can see from the above diagram where there are gaps in price levels there is some wasted memmory, though its a trade off between using the collection to store enough space for 'book' and 'collision buckets' which are static, and 'overflow buckets'. The section for 'overflow buckets' in the diagram looks like its waiting memory, but this is not the case. Was just difficult to depict the layout exactly as it looks.
+You can see from the above diagram where there are gaps in price levels there is some wasted memory, though it's a trade off between using the collection to store enough space for 'fast book' and 'collision buckets' which are static, and 'overflow buckets'. The section for 'overflow buckets' in the diagram looks like it's wasting memory, but this is not the case. Remember that 'overflow buckets' use lists. It was just difficult to depict the layout exactly in the diagram for overlow buckets.
 
-To give an iea of the memory usage the 'fast book' will use, it will 696 bytes for an 8 bit price type, 8 bit quantity type with 'fast book' of size 10 and a 'collision buckets' of 3. 
+To give an iea of the memory usage the 'fast book' will use, it will be 696 bytes for an 8 bit price type, 8 bit quantity type with 'fast book' of size 10 and a 'collision buckets' of 3. 
 The memory footprint of the 'fast book' is kept to a minimum by keeping pointers to the collision and overflow buckets, both of which are allocated to the heap. 
-The fast book itself does not request heap memory, and will consume memory of the the prevailing memory allocation mechanism, i.e stack for functions, or data section for globals, or heap where appropriate if allocated as part of an object.
+The fast book itself does not request heap memory, and will consume memory of the prevailing memory allocation mechanism, i.e stack for functions, or data section for globals, or heap where appropriate if allocated as part of an object.
+Fast book memory being kept to a minimum and in contiguous memory helps with high cpu cache hits. To some extent the same with collision buckets, and less so for the overflow.
 
-Total memory usage of a newly constructed book for the above combination is 1,600 bytes. This is the total of the 696 bytes of static data, and the additional memory used by stucturs on the heap. This is the total base footprint used by the collection. Any additions or deletions of data to the 'overflow buckets' will cause the collections total footprint to grow and contract. any additions to 'fast book' or 'collision buckets' will have no change.
+Total memory usage of a newly constructed book for the above combination is 1,600 bytes. This is the total of the 696 bytes of static data, and the additional memory used by structures on the heap. This is the total base footprint used by the collection. Any additions or deletions of data to the 'overflow buckets' will cause the collections total footprint to grow and contract. any additions to 'fast book' or 'collision buckets' will have no change.
+
+
+### Benchmark
+There's a lot more I want to do here for benchmarking as well as drilling down into the performance of the code, but initial benchmarks look strong.
+```
+Total time for 200 keys where 90% of searched keys are in the key range of the 'fast book'. I feel this is a realistic scenario.
+Map insert time: 3166ns
+Book insert time: 1375ns
+Map find time: 2000ns
+Book find time: 959ns
+Map erase time: 2875ns
+Book erase time: 1083ns
+
+Total times for fast book only keys evenly distributed
+Book insert random time for top of book: 708ns
+Book find random time for top of book: 500ns
+Book erase random time for top of book: 750ns
+
+Total times for collision bucket only keys evenly distributed
+Book insert : 1000ns
+Book : 583ns
+Book : 917ns
+
+Total times for overflow bucket only keys evenly distributed
+Book : 1208ns
+Book : 833ns
+Book : 1000ns
+```
+you can see a penalty for lower level keys. But this is expected and the trade off is worth it.
