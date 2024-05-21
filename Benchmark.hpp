@@ -132,6 +132,233 @@ static void RunBenchmarks()
     
     std::cout << "Book erase time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(book_erase_end - book_erase_start).count() << "ns" << std::endl;
     
+    //generate random keys in range 105 - 114
+    std::vector<size_t> random_keys;
+    
+    std::uniform_int_distribution<> randomDist(105, 114);
+    for (int i = 0; i < NUM_KEYS; i++) {
+        random_keys.push_back(randomDist(gen));
+    }
+    
+    std::cout << "keys into fast book only..." << std::endl;
+    
+    // benchmark insert random keys into map
+    auto startMapRandom = std::chrono::high_resolution_clock::now();
+    for(auto key: random_keys)
+    {
+        auto it  = book_map.lower_bound(key);
+        book_map.emplace_hint(it, key, key);
+    }
+    auto endMapRandom = std::chrono::high_resolution_clock::now();
+    
+    std::cout << "Map insert random time for top of book: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endMapRandom - startMapRandom).count()<< "ns" << std::endl;
+    
+    auto book_start_random = std::chrono::high_resolution_clock::now();
+    for(auto key: random_keys)
+    {
+        book.insert(BookType::Side::BID, std::move(key), std::move(key));
+    }
+    auto book_end_random = std::chrono::high_resolution_clock::now();
+    
+    std::cout << "Book insert random time for top of book: " << std::chrono::duration_cast<std::chrono::nanoseconds>(book_end_random - book_start_random).count() << "ns" << std::endl;
+    
+    // benchmark find random keys
+    auto startMapFindRandom = std::chrono::high_resolution_clock::now();
+    for(auto key: random_keys)
+    {
+        it = book_map.find(key);
+    }
+    auto endMapFindRandom = std::chrono::high_resolution_clock::now();
+    if(it == book_map.end())
+    {
+        std::cerr << "Benchmark failed" << std::endl;
+    }
+    
+    std::cout << "Map find random time for top of book: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endMapFindRandom - startMapFindRandom).count() << "ns" << std::endl;
+    
+    auto book_find_start_random = std::chrono::high_resolution_clock::now();
+    for(auto key: random_keys)
+    {
+        ok = book.find(BookType::Side::BID, key, value);
+    }
+    auto book_find_end_random = std::chrono::high_resolution_clock::now();
+    if(!ok)
+    {
+        std::cerr << "Benchmark failed" << std::endl;
+    }
+    
+    std::cout << "Book find random time for top of book: " << std::chrono::duration_cast<std::chrono::nanoseconds>(book_find_end_random - book_find_start_random).count()  << "ns" << std::endl;
+    
+    auto map_erase_start_random = std::chrono::high_resolution_clock::now();
+    for(auto key: random_keys)
+    {
+        book_map.erase(key);
+    }
+    auto map_erase_end_random = std::chrono::high_resolution_clock::now();
+    
+    std::cout << "Map erase random time for top of book: " << std::chrono::duration_cast<std::chrono::nanoseconds>(map_erase_end_random - map_erase_start_random).count() << "ns" << std::endl;
+    
+    auto book_erase_start_random = std::chrono::high_resolution_clock::now();
+    for(auto key: random_keys)
+    {
+        book.erase(BookType::Side::BID, key);
+    }
+
+    auto book_erase_end_random = std::chrono::high_resolution_clock::now();
+    
+    std::cout << "Book erase random time for top of book: " << std::chrono::duration_cast<std::chrono::nanoseconds>(book_erase_end_random - book_erase_start_random).count() << "ns" << std::endl;
+    
+    //generate random keys between 95 - 104
+    random_keys.clear();
+    std::uniform_int_distribution<> randomDist2(95, 104);
+    for (int i = 0; i < NUM_KEYS; i++) {
+        random_keys.push_back(randomDist2(gen));
+    }
+    
+    std::cout << std::endl << "keys into collision buckets only..." << std::endl;
+    
+    // benchmark insert random keys into map
+    auto startMapRandom2 = std::chrono::high_resolution_clock::now();
+    for(auto key: random_keys)
+    {
+        auto it  = book_map.lower_bound(key);
+        book_map.emplace_hint(it, key, key);
+    }
+    auto endMapRandom2 = std::chrono::high_resolution_clock::now();
+    
+    std::cout << "Map insert random time for bottom of book: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endMapRandom2 - startMapRandom2).count()<< "ns" << std::endl;
+    
+    auto book_start_random2 = std::chrono::high_resolution_clock::now();
+    for(auto key: random_keys)
+    {
+        book.insert(BookType::Side::BID, std::move(key), std::move(key));
+    }
+    auto book_end_random2 = std::chrono::high_resolution_clock::now();
+    
+    std::cout << "Book insert random time for bottom of book: " << std::chrono::duration_cast<std::chrono::nanoseconds>(book_end_random2 - book_start_random2).count() << "ns" << std::endl;
+    
+    // benchmark find random keys
+    auto startMapFindRandom2 = std::chrono::high_resolution_clock::now();
+    for(auto key: random_keys)
+    {
+        it = book_map.find(key);
+    }
+    auto endMapFindRandom2 = std::chrono::high_resolution_clock::now();
+    if(it == book_map.end())
+    {
+        std::cerr << "Benchmark failed" << std::endl;
+    }
+    
+    std::cout << "Map find random time for bottom of book: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endMapFindRandom2 - startMapFindRandom2).count() << "ns" << std::endl;
+    
+    auto book_find_start_random2 = std::chrono::high_resolution_clock::now();
+    for(auto key: random_keys)
+    {
+        ok = book.find(BookType::Side::BID, key, value);
+    }
+    auto book_find_end_random2 = std::chrono::high_resolution_clock::now();
+    if(!ok)
+    {
+        std::cerr << "Benchmark failed" << std::endl;
+    }
+    
+    std::cout << "Book find random time for bottom of book: " << std::chrono::duration_cast<std::chrono::nanoseconds>(book_find_end_random2 - book_find_start_random2).count()  << "ns" << std::endl;
+    
+    auto map_erase_start_random2 = std::chrono::high_resolution_clock::now();
+    for(auto key: random_keys)
+    {
+        book_map.erase(key);
+    }
+    auto map_erase_end_random2 = std::chrono::high_resolution_clock::now();
+    
+    std::cout << "Map erase random time for bottom of book: " << std::chrono::duration_cast<std::chrono::nanoseconds>(map_erase_end_random2 - map_erase_start_random2).count() << "ns" << std::endl;
+    
+    auto book_erase_start_random2 = std::chrono::high_resolution_clock::now();
+    for(auto key: random_keys)
+    {
+        book.erase(BookType::Side::BID, key);
+    }
+    auto book_erase_end_random2 = std::chrono::high_resolution_clock::now();
+    
+    std::cout << "Book erase random time for bottom of book: " << std::chrono::duration_cast<std::chrono::nanoseconds>(book_erase_end_random2 - book_erase_start_random2).count() << "ns" << std::endl;
+    
+    //generate random keys between 115 - 124
+    random_keys.clear();
+    std::uniform_int_distribution<> randomDist3(115, 124);
+    for (int i = 0; i < NUM_KEYS; i++) {
+        random_keys.push_back(randomDist3(gen));
+    }
+    
+    std::cout << std::endl << "keys into overflow buckets on the high side only..." << std::endl;
+    
+    // benchmark insert random keys into map
+    auto startMapRandom3 = std::chrono::high_resolution_clock::now();
+    for(auto key: random_keys)
+    {
+        auto it  = book_map.lower_bound(key);
+        book_map.emplace_hint(it, key, key);
+    }
+    auto endMapRandom3 = std::chrono::high_resolution_clock::now();
+    
+    std::cout << "Map insert random time for overflow buckets: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endMapRandom3 - startMapRandom3).count()<< "ns" << std::endl;
+    
+    auto book_start_random3 = std::chrono::high_resolution_clock::now();
+    for(auto key: random_keys)
+    {
+        book.insert(BookType::Side::BID, std::move(key), std::move(key));
+    }
+    auto book_end_random3 = std::chrono::high_resolution_clock::now();
+    
+    std::cout << "Book insert random time for overflow buckets: " << std::chrono::duration_cast<std::chrono::nanoseconds>(book_end_random3 - book_start_random3).count() << "ns" << std::endl;
+    
+    // benchmark find random keys
+    auto startMapFindRandom3 = std::chrono::high_resolution_clock::now();
+    for(auto key: random_keys)
+    {
+        it = book_map.find(key);
+    }
+    auto endMapFindRandom3 = std::chrono::high_resolution_clock::now();
+    if(it == book_map.end())
+    {
+        std::cerr << "Benchmark failed" << std::endl;
+    }
+    
+    std::cout << "Map find random time for overflow buckets: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endMapFindRandom3 - startMapFindRandom3).count() << "ns" << std::endl;
+    
+    auto book_find_start_random3 = std::chrono::high_resolution_clock::now();
+    
+    for(auto key: random_keys)
+    {
+        ok = book.find(BookType::Side::BID, key, value);
+    }
+    
+    auto book_find_end_random3 = std::chrono::high_resolution_clock::now();
+    if(!ok)
+    {
+        std::cerr << "Benchmark failed" << std::endl;
+    }
+    
+    std::cout << "Book find random time for overflow buckets: " << std::chrono::duration_cast<std::chrono::nanoseconds>(book_find_end_random3 - book_find_start_random3).count()  << "ns" << std::endl;
+    
+    auto map_erase_start_random3 = std::chrono::high_resolution_clock::now();
+    for(auto key: random_keys)
+    {
+        book_map.erase(key);
+    }
+    auto map_erase_end_random3 = std::chrono::high_resolution_clock::now();
+    
+    std::cout << "Map erase random time for overflow buckets: " << std::chrono::duration_cast<std::chrono::nanoseconds>(map_erase_end_random3 - map_erase_start_random3).count() << "ns" << std::endl;
+    
+    auto book_erase_start_random3 = std::chrono::high_resolution_clock::now();
+    
+    for(auto key: random_keys)
+    {
+        book.erase(BookType::Side::BID, key);
+    }
+    
+    auto book_erase_end_random3 = std::chrono::high_resolution_clock::now();
+    
+    std::cout << "Book erase random time for overflow buckets: " << std::chrono::duration_cast<std::chrono::nanoseconds>(book_erase_end_random3 - book_erase_start_random3).count() << "ns" << std::endl;
 }
 
 #endif /* Benchmark_h */

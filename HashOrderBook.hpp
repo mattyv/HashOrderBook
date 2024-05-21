@@ -220,6 +220,8 @@ private:
     }
     
 public:
+    using value_type = bid_ask_node;
+    
     HashOrderBook(const Key& hashing_mid_price)
     : _hashing_mid_price(hashing_mid_price)
     {
@@ -569,6 +571,165 @@ public:
     }
     
     friend void RunTests();
+    
+private:
+    
+    /*enum class IteratorDirection { FORWARD, REVERSE};
+    enum class IteratorConstness { CONST, NON_CONST};
+    template<IteratorDirection direction, IteratorConstness constness = IteratorConstness::NON_CONST>
+    class Xiterator
+    {
+    private:
+        using book_pointer = std::conditional_t<constness == IteratorConstness::CONST, const HashOrderBook*, HashOrderBook*>;
+        using value_type_pointer = std::conditional_t<constness == IteratorConstness::CONST, const value_type*, value_type*>;
+        using value_type_reference = std::conditional_t<constness == IteratorConstness::CONST, const value_type&, value_type&>;
+        using value = std::conditional_t<constness == IteratorConstness::CONST, const Xiterator, Xiterator>;
+        using pointer = std::conditional_t<constness == IteratorConstness::CONST, const Xiterator*, Xiterator*>;
+        using reference = std::conditional_t<constness == IteratorConstness::CONST, const Xiterator&, Xiterator&>;
+        
+        value_type_pointer _node = nullptr;
+        book_pointer _book = nullptr;
+        IteratorDirection _direction = direction;
+        
+        Xiterator(value_type_pointer node, book_pointer book)
+        : _node(node),
+        _book(book)
+        {
+        }
+        
+    public:
+        Xiterator()  = default;
+        // Default copy constructor - used for same type
+        Xiterator(const Xiterator& other) noexcept = default;
+        
+        Xiterator(Xiterator&& other) noexcept
+        {
+            _node = std::move(other._node);
+            _book = std::move(other._book);
+            _direction = std::move(other._direction);
+        }
+
+        // Default copy assignment operator - used for same type
+        Xiterator& operator=(const Xiterator& other) noexcept = default;
+
+        // Prevent cross-direction copying and assignment using a deleted function template
+        template<IteratorDirection OtherDirection>
+        Xiterator(const Xiterator<OtherDirection>&) = delete;
+       
+        template<IteratorDirection OtherDirection>
+        Xiterator& operator=(const Xiterator<OtherDirection>&) = delete;
+        
+        //converter functions to convert form forward to reverse and vice versa
+        //template<IteratorDirection OtherDirection>
+        auto get_other_direction() const  noexcept {
+            if constexpr (direction == IteratorDirection::FORWARD) {
+                return Xiterator<IteratorDirection::REVERSE, constness>(_node, _book);
+            } else {
+                return Xiterator<IteratorDirection::FORWARD, constness>(_node, _book);
+            }
+        }
+                    
+        
+        reference operator++()
+        {
+            if(_node == nullptr || _tree == nullptr)
+            {
+                return *this;
+            }
+            
+            //value_type tree to traverse
+            if (_direction == IteratorDirection::FORWARD)
+            {
+                if(_node->children[RIGHT] == nullptr )
+                    _node = nullptr;
+                else if(_tree->get(_node->first) != nullptr)//make sure node is at the root
+                    _node = _tree->_rotateToNextLarger();
+            }
+            else
+            {
+                if(_node->children[LEFT] == nullptr )
+                    _node = nullptr;
+                else if(_tree->get(_node->first) != nullptr)
+                    _node = _tree->_rotateToNextSmaller();
+            }
+            _isEnd = _node == nullptr;
+            return *this;
+        }
+        reference operator--()
+        {
+            if(_isEnd || _node == nullptr || _book == nullptr)
+            {
+                _isEnd = true;
+                return *this;
+            }
+            
+            //value_type tree to traverse
+            if (_direction == IteratorDirection::FORWARD)
+            {
+                //make sure node is at the root
+                if(_node->children[LEFT] == nullptr )
+                    _node = nullptr;
+                else if(_tree->get(_node->first) != nullptr)
+                    _node = _tree->_rotateToNextSmaller();
+            }
+            else
+            {
+                if(_node->children[RIGHT] == nullptr )
+                    _node = nullptr;
+                else if(_tree->get(_node->first) != nullptr)
+                    _node = _tree->_rotateToNextLarger();
+            }
+            _isEnd = _node == nullptr;
+            return *this;
+        }
+        //pre-increment
+        value operator++(int)
+        {
+            Xiterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+        //pre-decrement
+        value operator--(int)
+        {
+            Xiterator tmp = *this;
+            --(*this);
+            return tmp;
+        }
+        constexpr value_type_pointer operator->() const
+        {
+            return _node;
+        }
+        constexpr value_type_reference operator*() const
+        {
+            return *_node;
+        }
+        constexpr bool operator==(const Xiterator& rhs) const
+        {
+            if(_book != rhs._book)
+                return false;
+            if(_isEnd == rhs._isEnd)
+                return true;
+            if(_node == nullptr && rhs._node == nullptr)
+                return true;
+            if(_node == nullptr || rhs._node == nullptr)
+                return false;
+            return *_node == *rhs._node;
+        }
+        constexpr bool operator!=(const Xiterator& rhs) const
+        {
+            if(_book != rhs._book)
+                return true;
+            if(_isEnd != rhs._isEnd)
+                return true;
+            if(_node == nullptr && rhs._node == nullptr)
+                return false;
+            if(_node == nullptr || rhs._node == nullptr)
+                return true;
+            return *_node != *rhs._node;
+        }
+        friend class HashOrderBook;
+    };*/
 };
 
 #endif /* HashOrderBook_h */

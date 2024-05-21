@@ -152,7 +152,7 @@ static void RunTests()
     test(collision_bucket, 0ul, "hash_key failed", __LINE__);
     
     //should yield last index on zero'th collision bucket
-    size_t price = mid_price + ((fast_book_size / 2) * tick_size) -1;
+    size_t price = mid_price + ((fast_book_size / 2) / tick_size) -1;
     test(order_book.hash_key(BookType::Side::ASK ,price, hash, collision_bucket),"hash_key failed", __LINE__);
     test(hash, 9ul, "hash_key failed", __LINE__);
     test(collision_bucket, 0ul, "hash_key failed", __LINE__);
@@ -163,7 +163,7 @@ static void RunTests()
     test(collision_bucket, 1ul, "hash_key failed", __LINE__);
     
     //should yield last index on first collision bucket
-    price += fast_book_size * tick_size;
+    price += fast_book_size / tick_size;
     test(order_book.hash_key(BookType::Side::ASK , price, hash, collision_bucket),"hash_key failed", __LINE__);
     test(hash, 9ul, "hash_key failed", __LINE__);
     test(collision_bucket, 1ul, "hash_key failed", __LINE__);
@@ -174,7 +174,7 @@ static void RunTests()
     test(collision_bucket, 2ul, "hash_key failed", __LINE__);
     
     //should yield last index on second collision bucket
-    price += fast_book_size * tick_size;
+    price += fast_book_size / tick_size;
     test_failure(order_book.hash_key(BookType::Side::ASK, price, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 9ul, "hash_key failed", __LINE__);
     test(collision_bucket, 2ul, "hash_key failed", __LINE__);
@@ -185,7 +185,7 @@ static void RunTests()
     test(collision_bucket, 3ul, "hash_key failed", __LINE__);
     
     //test the keys lower than mid
-    price = mid_price - ((fast_book_size / 2) * tick_size);
+    price = mid_price - ((fast_book_size / 2) / tick_size);
     test(order_book.hash_key(BookType::Side::BID, price, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 0ul, "hash_key failed", __LINE__);
     test(collision_bucket, 0ul, "hash_key failed", __LINE__);
@@ -194,7 +194,7 @@ static void RunTests()
     test(hash, 9ul, "hash_key failed", __LINE__);
     test(collision_bucket, 1ul, "hash_key failed", __LINE__);
     
-    price -= fast_book_size * tick_size;
+    price -= fast_book_size / tick_size;
     test(order_book.hash_key(BookType::Side::BID, price, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 0ul, "hash_key failed", __LINE__);
     test(collision_bucket, 1ul, "hash_key failed", __LINE__);
@@ -211,7 +211,7 @@ static void RunTests()
     test(hash, 8ul, "hash_key failed", __LINE__);
     test(collision_bucket, 2ul, "hash_key failed", __LINE__);
     
-    price -= fast_book_size * tick_size;
+    price -= fast_book_size / tick_size;
     test_failure(order_book.hash_key(BookType::Side::BID, price, hash, collision_bucket), "hash_key failed", __LINE__);
     test(hash, 0ul, "hash_key failed", __LINE__);
     test(collision_bucket, 2ul, "hash_key failed", __LINE__);
@@ -252,11 +252,11 @@ static void RunTests()
     std::cout << "Inserting Ask Price: " << price << " Volume: " << volume << std::endl;
     test(order_book.insert(BookType::Side::ASK, std::move(price), std::move(volume)), "insert failed", __LINE__);
     
-    price = mid_price - ((fast_book_size / 2) * tick_size);
+    price = mid_price - ((fast_book_size / 2) / tick_size);
     volume = price;
     std::cout << "Inserting Bid Price: " << price << " Volume: " << volume << std::endl;
     test(order_book.insert(BookType::Side::BID, std::move(price), std::move(volume)), "insert failed", __LINE__);
-    size_t ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1;
+    size_t ask_price = mid_price + ((fast_book_size / 2) / tick_size) -1;
     size_t ask_volume = ask_price;
     std::cout << "Inserting Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
     test(order_book.insert(BookType::Side::ASK, std::move(ask_price), std::move(ask_volume)), "insert failed", __LINE__);
@@ -271,9 +271,9 @@ static void RunTests()
     std::cout << "Inserting Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
     test(order_book.insert(BookType::Side::ASK, std::move(ask_price), std::move(ask_volume)), "insert failed", __LINE__);
     
-    price = mid_price - ((fast_book_size / 2) * tick_size) - (fast_book_size * tick_size);
+    price = mid_price - ((fast_book_size / 2) / tick_size) - (fast_book_size / tick_size);
     volume = price;
-    ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1 + (fast_book_size * tick_size);
+    ask_price = mid_price + ((fast_book_size / 2) / tick_size) -1 + (fast_book_size / tick_size);
     ask_volume = ask_price;
     std::cout << "Inserting Bid Price: " << price << " Volume: " << volume << std::endl;
     test(order_book.insert(BookType::Side::BID, std::move(price), std::move(volume)), "insert failed", __LINE__);
@@ -290,9 +290,9 @@ static void RunTests()
     std::cout << "Inserting Ask Price: " << ask_price << " Volume: " << ask_volume << std::endl;
     test(order_book.insert(BookType::Side::ASK, std::move(ask_price), std::move(ask_volume)), "insert failed", __LINE__);
     
-    price = mid_price - ((fast_book_size / 2) * tick_size) - (2*fast_book_size * tick_size);
+    price = mid_price - ((fast_book_size / 2) / tick_size) - (2*fast_book_size / tick_size);
     volume = price;
-    ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1 + (2*fast_book_size * tick_size);
+    ask_price = mid_price + ((fast_book_size / 2) / tick_size) -1 + (2*fast_book_size / tick_size);
     ask_volume = ask_price;
     std::cout << "Inserting Bid Price: " << price << " Volume: " << volume << std::endl;
     test(order_book.insert(BookType::Side::BID, std::move(price), std::move(volume)), "insert failed", __LINE__);
@@ -313,9 +313,9 @@ static void RunTests()
     test(order_book.insert(BookType::Side::ASK, std::move(ask_price), std::move(ask_volume)), "insert failed", __LINE__);
     test_failure(order_book.insert(BookType::Side::ASK, std::move(ask_price), std::move(ask_volume)), "insert failed", __LINE__);
     
-    price = mid_price - ((fast_book_size / 2) * tick_size) - (3*fast_book_size * tick_size);
+    price = mid_price - ((fast_book_size / 2) / tick_size) - (3*fast_book_size / tick_size);
     volume = price;
-    ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1 + (3*fast_book_size * tick_size);
+    ask_price = mid_price + ((fast_book_size / 2) / tick_size) -1 + (3*fast_book_size / tick_size);
     ask_volume = ask_price;
     std::cout << "Inserting Bid Price: " << price << " Volume: " << volume << std::endl;
     test(order_book.insert(BookType::Side::BID, std::move(price), std::move(volume)), "insert failed", __LINE__);
@@ -362,11 +362,11 @@ static void RunTests()
     test(order_book.find(BookType::Side::ASK, price, ask_volume), "find failed", __LINE__);
     test(ask_volume, price, "find failed", __LINE__);
     
-    price = mid_price - ((fast_book_size / 2) * tick_size);
+    price = mid_price - ((fast_book_size / 2) / tick_size);
     std::cout << "Finding Bid Price: " << price << std::endl;
     test(order_book.find(BookType::Side::BID, price, volume), "find failed", __LINE__);
-    test(volume, mid_price - ((fast_book_size / 2) * tick_size), "find failed", __LINE__);
-    ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1;
+    test(volume, mid_price - ((fast_book_size / 2) / tick_size), "find failed", __LINE__);
+    ask_price = mid_price + ((fast_book_size / 2) / tick_size) -1;
     std::cout << "Finding Ask Price: " << ask_price << std::endl;
     test(order_book.find(BookType::Side::ASK, ask_price, ask_volume), "find failed", __LINE__);
     
@@ -381,8 +381,8 @@ static void RunTests()
     test(order_book.find(BookType::Side::ASK, ask_price, ask_volume), "find failed", __LINE__);
     test(ask_volume, ask_price, "find failed", __LINE__);
     
-    price = mid_price - ((fast_book_size / 2) * tick_size) - (fast_book_size * tick_size);
-    ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1 + (fast_book_size * tick_size);
+    price = mid_price - ((fast_book_size / 2) / tick_size) - (fast_book_size / tick_size);
+    ask_price = mid_price + ((fast_book_size / 2) / tick_size) -1 + (fast_book_size / tick_size);
     std::cout << "Finding Bid Price: " << price << std::endl;
     test(order_book.find(BookType::Side::BID, price, volume), "find failed", __LINE__);
     std::cout << "Finding Ask Price: " << ask_price << std::endl;
@@ -398,8 +398,8 @@ static void RunTests()
     test(order_book.find(BookType::Side::ASK, ask_price, ask_volume), "find failed", __LINE__);
     test(ask_volume, ask_price, "find failed", __LINE__);
     
-    price = mid_price - ((fast_book_size / 2) * tick_size) - (2*fast_book_size * tick_size);
-    ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1 + (2*fast_book_size * tick_size);
+    price = mid_price - ((fast_book_size / 2) / tick_size) - (2*fast_book_size / tick_size);
+    ask_price = mid_price + ((fast_book_size / 2) / tick_size) -1 + (2*fast_book_size / tick_size);
     std::cout << "Finding Bid Price: " << price << std::endl;
     test(order_book.find(BookType::Side::BID, price, volume), "find failed", __LINE__);
     test(volume, price, "find failed", __LINE__);
@@ -417,8 +417,8 @@ static void RunTests()
     test(order_book.find(BookType::Side::ASK, ask_price, ask_volume), "find failed", __LINE__);
     test(ask_volume, ask_price, "find failed", __LINE__);
     
-    price = mid_price - ((fast_book_size / 2) * tick_size) - (3*fast_book_size * tick_size);
-    ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1 + (3*fast_book_size * tick_size);
+    price = mid_price - ((fast_book_size / 2) / tick_size) - (3*fast_book_size / tick_size);
+    ask_price = mid_price + ((fast_book_size / 2) / tick_size) -1 + (3*fast_book_size / tick_size);
     ask_volume = ask_price;
     std::cout << "Finding Bid Price: " << price << std::endl;
     test(order_book.find(BookType::Side::BID, price, volume), "find failed", __LINE__);
@@ -439,7 +439,7 @@ static void RunTests()
     
     /*                  test rehash             */
     std::cout << "Testing rehash" << std::endl;
-    order_book.rehash(mid_price + (fast_book_size * tick_size));
+    order_book.rehash(mid_price + (fast_book_size / tick_size));
     
     
     /*                  erase tests              */
@@ -464,11 +464,11 @@ static void RunTests()
     test(order_book.erase(BookType::Side::ASK, price), "erase failed", __LINE__);
     test_failure(order_book.erase(BookType::Side::ASK, price), "find failed", __LINE__);
     
-    price = mid_price - ((fast_book_size / 2) * tick_size);
+    price = mid_price - ((fast_book_size / 2) / tick_size);
     std::cout << "Erasing Bid Price: " << price << std::endl;
     test(order_book.erase(BookType::Side::BID, price), "erase failed", __LINE__);
     test_failure(order_book.erase(BookType::Side::BID, price), "find failed", __LINE__);
-    ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1;
+    ask_price = mid_price + ((fast_book_size / 2) / tick_size) -1;
     std::cout << "Erasing Ask Price: " << ask_price << std::endl;
     test(order_book.erase(BookType::Side::ASK, ask_price), "erase failed", __LINE__);
     test_failure(order_book.erase(BookType::Side::ASK, ask_price), "find failed", __LINE__);
@@ -484,8 +484,8 @@ static void RunTests()
     test(order_book.erase(BookType::Side::ASK, ask_price), "erase failed", __LINE__);
     test_failure(order_book.erase(BookType::Side::ASK, ask_price), "find failed", __LINE__);
     
-    price = mid_price - ((fast_book_size / 2) * tick_size) - (fast_book_size * tick_size);
-    ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1 + (fast_book_size * tick_size);
+    price = mid_price - ((fast_book_size / 2) / tick_size) - (fast_book_size / tick_size);
+    ask_price = mid_price + ((fast_book_size / 2) / tick_size) -1 + (fast_book_size / tick_size);
     std::cout << "Erasing Bid Price: " << price << std::endl;
     test(order_book.erase(BookType::Side::BID, price), "erase failed", __LINE__);
     test_failure(order_book.erase(BookType::Side::BID, price), "find failed", __LINE__);
@@ -503,8 +503,8 @@ static void RunTests()
     test(order_book.erase(BookType::Side::ASK, ask_price), "erase failed", __LINE__);
     test_failure(order_book.erase(BookType::Side::ASK, ask_price), "find failed", __LINE__);
     
-    price = mid_price - ((fast_book_size / 2) * tick_size) - (2*fast_book_size * tick_size);
-    ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1 + (2*fast_book_size * tick_size);
+    price = mid_price - ((fast_book_size / 2) / tick_size) - (2*fast_book_size / tick_size);
+    ask_price = mid_price + ((fast_book_size / 2) / tick_size) -1 + (2*fast_book_size / tick_size);
     std::cout << "Erasing Bid Price: " << price << std::endl;
     test(order_book.erase(BookType::Side::BID, price), "erase failed", __LINE__);
     test_failure(order_book.erase(BookType::Side::BID, price), "find failed", __LINE__);
@@ -522,8 +522,8 @@ static void RunTests()
     test(order_book.erase(BookType::Side::ASK, ask_price), "erase failed", __LINE__);
     test_failure(order_book.erase(BookType::Side::ASK, ask_price), "find failed", __LINE__);
     
-    price = mid_price - ((fast_book_size / 2) * tick_size) - (3*fast_book_size * tick_size);
-    ask_price = mid_price + ((fast_book_size / 2) * tick_size) -1 + (3*fast_book_size * tick_size);
+    price = mid_price - ((fast_book_size / 2) / tick_size) - (3*fast_book_size / tick_size);
+    ask_price = mid_price + ((fast_book_size / 2) / tick_size) -1 + (3*fast_book_size / tick_size);
     ask_volume = ask_price;
     std::cout << "Erasing Bid Price: " << price << std::endl;
     test(order_book.erase(BookType::Side::BID, price), "erase failed", __LINE__);
