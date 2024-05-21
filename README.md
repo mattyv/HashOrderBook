@@ -42,7 +42,7 @@ The HashOrderBook requires a midpoint price when constructed and a tick size as 
 To index a value the hash is computed as a relative index in 'ticks' from the midpoint price. E.e if the fast book size is say 10, and the midpoint price is 100 and the insert of a Bid at price 103 is calculated to be an index of 8. i.e. 10 / 2 give the mid and (price - mid price) /tick size + mid gives 8.  
 
 If the index is greater than the bucket size of 'fast book' the index will wrap around but in doing so we compute a collision index. 1 for the first wrap and 2 for the second and so on. 
-If the index is negative it wraps positively around. e.e an index -1 will wrap around to 9 and give us a collison index of 1.
+If the index is negative it wraps positively around. e.g. an index -1 will wrap around to 9 and give us a collison index of 1.
 
 The collision index if greater than 0 and less than or equal to collision_buckets will index into collision buckets.
 If the collision index is greater than collision_buckets it will use the 'overflow buckets'.
