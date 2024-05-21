@@ -20,7 +20,7 @@ I don't want to explain what an order book is, but I like the concept of a conti
 The idea here is to leverage some ideas from hashmap. 
 Commonly a hashmap is implemented as a set of contiguous buckets which can be indexed from 0 to n. 
 Data is stored and retrieved by computing a hash on the key which indexes into the buckets. The trick is to wrap the hash at the length n by applying a modulo calculation on the hash before using it to index. 
-Any buckets where the hash of two keys collides are chained together (in the case of std::unordered_map it's a list. Other forms of hash maps can employ other mechanisms to deal with collisions).
+Any buckets where the hash of two keys collides both entries are stored on the same but but are chained together (in the case of std::unordered_map it's a list. Other forms of hash maps can employ other mechanisms to deal with collisions).
 A hash map will also keep track of a load value, which is the number of items in the collection divided by the number of buckets.
 When a threshold on the load factor is crossed all items in the map are rehashed after extending the number of buckets.
 
