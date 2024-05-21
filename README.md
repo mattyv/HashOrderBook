@@ -50,20 +50,26 @@ If the collision index is greater than collision_buckets it will use the 'overfl
 This way the prices closest to the midpoint price are fastest to access.
 
 There is one caveat in that the layered approach is only reserved for prices which are 'worse' than the mid (bid - lower prices, ask - higher prices). If a bid price goes high and wraps around it goes straight to using the 'overflow buckets'. Same for the lower ask prices which wrap. 
+Via this mechanism the collection support quick large moves and crossed order books. But in the case of large moves the collection should be rehashed.
 
-In this case a rehash is required.
+
+
 Rehashing involves using a new midpoint price to generate new index values for hash and collision bucket to re-centre the prices around this midpoint. 
 
 ### Todo
 potentially auto rehash on insert and maybe erase.
-
-Below is a diagram of the blow code...
+### Memory usage
+Below is an attempt to diagram a real-life exampe based off the blow code...
 ```
-//one collision bucket for easy drawing :)
 HashOrderBook<int, int, 1, 10, 2> book(100);
 ```
 ![Diagram](OrderBookRealLifeExample.png)
 
-### Memory usage
-The main fast book uses 696 bytes for an 8 bit key, 8 bit value type with 'fast book' of 10 and a 'collision buckets' of 3. 
-Total memory usage of the newly constructed book for this combination is 1,600 bytes.
+
+You can see from the above diagram where there are gaps in price levels there is some wasted memmory, though its a trade off between using the collection to store enough space for 'book' and 'collision buckets' which are static, and 'overflow buckets'. The section for 'overflow buckets' in the diagram looks like its waiting memory, but this is not the case. Was just difficult to depict the layout exactly as it looks.
+
+To give an iea of the memory usage the 'fast book' will use, it will 696 bytes for an 8 bit price type, 8 bit quantity type with 'fast book' of size 10 and a 'collision buckets' of 3. 
+The memory footprint of the 'fast book' is kept to a minimum by keeping pointers to the collision and overflow buckets, both of which are allocated to the heap. 
+The fast book itself does not request heap memory, and will consume memory of the the prevailing memory allocation mechanism, i.e stack for functions, or data section for globals, or heap where appropriate if allocated as part of an object.
+
+Total memory usage of a newly constructed book for the above combination is 1,600 bytes. This is the total of the 696 bytes of static data, and the additional memory used by stucturs on the heap. This is the total base footprint used by the collection. Any additions or deletions of data to the 'overflow buckets' will cause the collections total footprint to grow and contract. any additions to 'fast book' or 'collision buckets' will have no change.
