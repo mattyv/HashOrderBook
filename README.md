@@ -57,12 +57,12 @@ Rehashing involves using a new midpoint price to generate new index values for h
 ### Todo
 potentially auto rehash on insert and maybe erase.
 
-Below is a simplified diagram of the blow code...
+Below is a diagram of the blow code...
 ```
 //one collision bucket for easy drawing :)
-HashOrderBook<int, int, 1, 13, 1> book(100);
+HashOrderBook<int, int, 1, 10, 2> book(100);
 ```
-![Diagram](HashOrderBook.png)
+![Diagram](OrderBookRealLifeExample.png)
 
 ### Memory usage
 The main fast book uses 696 bytes for an 8 bit key, 8 bit value type with 'fast book' of 10 and a 'collision buckets' of 3. 
