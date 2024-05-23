@@ -79,27 +79,29 @@ Total memory usage of a newly constructed book for the above combination is 1,60
 ### Benchmark
 There's a lot more I want to do here for benchmarking as well as drilling down into the performance of the code, but initial benchmarks look strong.
 ```
-Total time for 200 keys where 90% of searched keys are in the key range of the 'fast book'. I feel this is a realistic scenario.
-Map insert time: 3166ns
-Book insert time: 1375ns
-Map find time: 2000ns
-Book find time: 959ns
-Map erase time: 2875ns
-Book erase time: 1083ns
+Average time for 200 keys where 90% of searched keys are in the key range of the 'fast book'. I feel this is a realistic scenario.
+Map insert time: 183ns
+Book insert time: 66ns
+Map find time: 97ns
+Book find time: 46ns
+Map erase time: 97ns
+Book erase time: 38ns
 
-Total times for fast book only keys evenly distributed
-Book insert random time for top of book: 708ns
-Book find random time for top of book: 500ns
-Book erase random time for top of book: 750ns
+-- Each book layers one at a time ---
+Fast book only keys evenly distributed
+Book insert time for top of book: 87ns
+Book find random time for top of book: 27ns averaged over 200 finds
+Book erase time for top of book: 29ns
 
-Total times for collision bucket only keys evenly distributed
-Book insert : 1000ns
-Book : 583ns
-Book : 917ns
+Collision bucket only keys evenly distributed
+Book insert time for top of book: 79ns
+Book find random time for top of book: 34ns averaged over 200 finds
+Book erase time for top of book: 37ns
 
-Total times for overflow bucket only keys evenly distributed
-Book : 1208ns
-Book : 833ns
-Book : 1000ns
+Overflow bucket only keys evenly distributed
+Book insert time for top of book: 200ns
+Book find random time for top of book: 77ns averaged over 200 finds
+Book erase time for top of book: 187ns
+-------------------------------------
 ```
 you can see a penalty for lower level keys. But this is expected and the trade off is worth it.
