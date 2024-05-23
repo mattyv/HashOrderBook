@@ -1,5 +1,5 @@
 # HashOrderBook (Concept / Work in progress)
-Here this project attempts to tackle some of the data challenges of the financial markets 'order book' directly. Rather than using existing associative containers from C++ standard template library, it looks to create something bespoke which fulfils the needs of the concept directly to avoid any pitfalls or generalized implementation.
+Is an experement, hoping to tackle some of the data challenges of the financial markets 'order book' directly. Rather than using existing associative containers from C++ standard template library, it looks to create something bespoke which fulfils the needs of the concept directly to avoid any pitfalls or generalized implementation.
 
 ### What are the needs & challenges
  1 - Order retrieval. Other data structures (e.g. std::map) support this though the penalty is on tree traversal on insert/update/delete with O(log n) complexity.
