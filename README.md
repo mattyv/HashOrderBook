@@ -1,5 +1,5 @@
 # HashOrderBook (Concept / Work in progress)
-Is an experement, hoping to tackle some of the data challenges of the financial markets 'order book' directly. Rather than using existing associative containers from C++ standard template library, it looks to create something bespoke which fulfils the needs of the concept directly to avoid any pitfalls or generalized implementation.
+Is an experiment, hoping to tackle some of the data challenges of the financial markets 'order book' directly. Rather than using existing associative containers from C++ standard template library, it looks to create something bespoke which fulfils the needs of the concept directly to avoid any pitfalls or generalized implementation.
 
 ### What are the needs & challenges
  1 - Order retrieval. Other data structures (e.g. std::map) support this though the penalty is on tree traversal on insert/update/delete with O(log n) complexity.
@@ -66,7 +66,7 @@ HashOrderBook<int, int, 1, 10, 2> book(100);
 ![Diagram](OrderBookRealLifeExample.png)
 
 
-You can see from the above diagram where there are gaps in price levels there is some wasted memory, though it's a trade off between using the collection to store enough space for 'fast book' and 'collision buckets' which are static, and 'overflow buckets'. The section for 'overflow buckets' in the diagram looks like it's wasting memory, but this is not the case. Remember that 'overflow buckets' use lists. It was just difficult to depict the layout exactly in the diagram for overlow buckets.
+You can see from the above diagram where there are gaps in price levels there is some wasted memory, though it's a trade off between using the collection to store enough space for 'fast book' and 'collision buckets' which are static, and 'overflow buckets'. The section for 'overflow buckets' in the diagram looks like it's wasting memory, but this is not the case. Remember that 'overflow buckets' use lists. It was just difficult to depict the layout exactly in the diagram for overflow buckets.
 
 To give an iea of the memory usage the 'fast book' will use, it will be 696 bytes for an 8 bit price type, 8 bit quantity type with 'fast book' of size 10 and a 'collision buckets' of 3. 
 The memory footprint of the 'fast book' is kept to a minimum by keeping pointers to the collision and overflow buckets, both of which are allocated to the heap. 
@@ -74,6 +74,11 @@ The fast book itself does not request heap memory, and will consume memory of th
 Fast book memory being kept to a minimum and in contiguous memory helps with high cpu cache hits. To some extent the same with collision buckets, and less so for the overflow.
 
 Total memory usage of a newly constructed book for the above combination is 1,600 bytes. This is the total of the 696 bytes of static data, and the additional memory used by structures on the heap. This is the total base footprint used by the collection. Any additions or deletions of data to the 'overflow buckets' will cause the collections total footprint to grow and contract. any additions to 'fast book' or 'collision buckets' will have no change.
+
+### Memory alignment
+The collection will align the first entry of the fast_book on the cache line boundary. 
+To avoid any scenario where a later nth entry in the base array spans from one cache line to another (assuming the total size of node is less than a cache line) the code will add padding to avoid any spillage.
+This helps for random access and avoids having to pull two cache lines as opposed to one. 
 
 
 ### Benchmark
@@ -104,4 +109,4 @@ Book find random time for top of book: 77ns averaged over 200 finds
 Book erase time for top of book: 187ns
 -------------------------------------
 ```
-you can see a penalty for lower level keys. But this is expected and the trade off is worth it.
+you can see a penalty for lower level keys. But this is expected.
