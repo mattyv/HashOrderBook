@@ -110,3 +110,7 @@ Book erase time for top of book: 187ns
 -------------------------------------
 ```
 you can see a penalty for lower level keys. But this is expected.
+
+### Open questions
+* How to efficiently do iterators? The fast book and collision buckets are fairly straight forward. Iterate over gaps until you find a used bucket on that 'side'; if wrapping up go up on the collision bucket. Once geting to overflow buckets its more complex. They are not stored in ascending order. And knowing if there are more elements in the direction of travel is no-trivial.
+
