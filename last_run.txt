@@ -1,10 +1,13 @@
 What size are things?...
 size of bid_ask_node: 48
-size of collision_bucket: 64
-size of overflow_bucket_type: 64
-size of bucket_type: 640
-Size of static order_book: 696 bytes. Or 5 cache lines.
+size of collision_bucket: 72
+size of overflow_bucket_type: 72
+size of bucket_type: 720
+Cache line size: 128
+Size of static order_book: 896 bytes. Or 7 cache lines.
+Size of book array: 720
 Total order_book size: 1600 bytes. Or 12 cache lines
+Node size: 72 padding: 0
 
 Running tests...
 Testing hashing...
@@ -51,36 +54,6 @@ Finding Ask Price: 144
 Finding Bid Price: 74
 Finding Ask Price: 145 Volume: 144
 Testing rehash
-bucket: 0
-Bid key: 105
-Bid key: 95
-Ask key: 115
-Bid key: 85
-Ask key: 125
-Ask key: 135
-Bid key: 75
-Ask key: 145
-bucket: 1
-bucket: 2
-bucket: 3
-bucket: 4
-Bid key: 109
-bucket: 5
-Bid key: 110
-Ask key: 110
-bucket: 6
-Ask key: 111
-bucket: 7
-bucket: 8
-bucket: 9
-Ask key: 114
-Bid key: 104
-Ask key: 124
-Bid key: 94
-Ask key: 134
-Bid key: 84
-Ask key: 144
-Bid key: 74
 Testing erase
 Eraseing Bid Price: 110
 Eraseing Ask Price: 110
@@ -103,10 +76,33 @@ Erasing Ask Price: 145
 All tests passed
 
 Running benchmarks...
-Map insert time: 3000ns
-Book insert time: 1333ns
-Map find time: 1584ns
-Book find time: 959ns
-Map erase time: 3125ns
-Book erase time: 1167ns
+Map insert time: 16ns
+Book insert time: 6ns
+Map find time: 7ns
+Book find time: 4ns
+Map erase time: 15ns
+Book erase time: 6ns
+keys into fast book only...
+Map random time for top of book: 41ns
+Book random time for top of book: 12ns
+Map find random time for top of book: 10ns
+Book find time for top of book: 2ns
+Map erase time for top of book: 50ns
+Book erase time for top of book: 8ns
+
+keys into collision buckets only...
+Map time for bottom of book: 41ns
+Book insert time for bottom of book: 12ns
+Map find random time for bottom of book: 10ns
+Book find random time for bottom of book: 2ns
+Map erase time for bottom of book: 41ns
+Book erase time for bottom of book: 8ns
+
+keys into overflow buckets on the high side only...
+Map insert time for overflow buckets: 45ns
+Book insert time for overflow buckets: 208ns
+Map find random time for overflow buckets: 10ns
+Book find random time for overflow buckets: 4ns
+Map erase time for overflow buckets: 62ns
+Book erase time for overflow buckets: 25ns
 Program ended with exit code: 0

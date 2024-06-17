@@ -10,27 +10,30 @@
 
 #include <array>
 #include <optional>
-#include <list>
+#include <forward_list>
 #include <memory>
+
 
 //concept for key to require == - /
 template<typename KeyType>
 concept KeyConcept = requires(KeyType a, KeyType b)
 {
-    {a == b} -> std::same_as<bool>;
-    {a - b} -> std::same_as<KeyType>;
-    {a / b} -> std::same_as<size_t>;
+    { a == b } -> std::same_as<bool>;
+    { a - b } -> std::convertible_to<KeyType>;
+    { a / b } -> std::convertible_to<std::size_t>;
 };
+
 
 template<KeyConcept Key,
         class Value,
         Key tick_size, //small key value to show minimum price movement
         size_t fast_book_size, //fast book size is size of bid and ask depth combined
         size_t collision_buckets,
-        size_t rehash_distance = fast_book_size> //how far the mid need to move from it current location before we rehash
+        bool auto_rehash = false> //rehash if the mid price moves out of the fast book size
 class HashOrderBook
 {
 public:
+    
     enum class Side
     {
         BID,
@@ -40,6 +43,8 @@ public:
     static constexpr Key tick_size_val = tick_size;
     static constexpr size_t fast_book_size_val = fast_book_size;
     static constexpr size_t collision_buckets_val = collision_buckets;
+    static constexpr size_t cache_line_size = 128;
+
 private:
     struct bid_ask_node
     {
@@ -64,37 +69,63 @@ private:
         bid_ask_node(const bid_ask_node& other) = default;
         ~bid_ask_node() = default;
         bid_ask_node& operator=(const bid_ask_node& other) = default;
-        bid_ask_node& operator=(bid_ask_node&& other) = default;
+        bid_ask_node& operator=(bid_ask_node&& other) noexcept= default;
     };
     
-
+    struct bid_ask_collision_node : public bid_ask_node
+    {
+        size_t collision_index;
+        
+        bid_ask_collision_node() = delete;
+        bid_ask_collision_node(Key&& key, Value&& value, Side side, size_t collision_index)
+                : bid_ask_node(std::move(key), std::move(value), side), collision_index(collision_index) {}
+        
+        bid_ask_collision_node(const bid_ask_collision_node& other) = default;
+        ~bid_ask_collision_node() = default;
+    };
+    
+    
+    using list_type = std::forward_list<bid_ask_collision_node>;
+    
     template<size_t buckets>
     struct collision_bucket
     {
         bid_ask_node first_node;
-        using overflow_bucket_type = std::unique_ptr<std::list<bid_ask_node>>;
+        using overflow_bucket_type = std::unique_ptr<list_type>;
         using bucket_type = std::unique_ptr<std::array<bid_ask_node, buckets>>;
         bucket_type nodes;
         overflow_bucket_type overflow_bucket;
         
+        
+        static constexpr size_t size = sizeof(first_node) + sizeof(nodes) + sizeof(overflow_bucket);
+    private:
+        static constexpr size_t how_many_nodes_per_line = cache_line_size / size;
+        static constexpr size_t remainder = cache_line_size - (size * how_many_nodes_per_line);
+    public:
+        static constexpr size_t padding_size = (size >= cache_line_size ?  0ul   : remainder / how_many_nodes_per_line);
+        
+        std::array<char, padding_size> padding; //padd out the structure so no items wrap over a cache when sitting in array.
+        //this helps with random access. Without it we may need to fetch 2 cache lines instead of 1 if any of the
+        //above members are on either size of the cache line divide.
+        
         collision_bucket()
                 : nodes(std::make_unique<std::array<bid_ask_node, buckets>>()),
-                  overflow_bucket(std::make_unique<std::list<bid_ask_node>>()) {}
+                  overflow_bucket(std::make_unique<list_type>()) {}
         ~collision_bucket() = default;
         collision_bucket(const collision_bucket& other) = default;
     };
     
     using collision_bucket_type = collision_bucket<collision_buckets>;
     using bucket_type = std::array<collision_bucket_type, fast_book_size>;
-    bucket_type _buckets;
+    alignas(cache_line_size)bucket_type _buckets;
     
     Key _hashing_mid_price;
-    std::optional<Key> _best_bid, _best_offer;
     size_t _current_mid_index = fast_book_size / 2, _size = 0;
+    std::optional<Key> _best_bid, _best_offer;
 private:
     constexpr size_t _positiveMod(long x, long mod) const
     {
-        if (mod == 0) {
+        if (mod == 0)[[unlikely]] {
             throw std::invalid_argument("mod must be non-zero");  // Handle division by zero scenario
         }
         long result = x % mod;
@@ -106,7 +137,7 @@ private:
     
     constexpr size_t _calc_collision_bucket(long index, long size) const
     {
-        if (size == 0) {
+        if (size == 0)[[unlikely]] {
             throw std::invalid_argument("size must be non-zero");  // Handle division by zero scenario
         }
 
@@ -139,6 +170,7 @@ private:
     
     bool _erase_node(Side side, const Key& key, typename collision_bucket_type::overflow_bucket_type& overflow_bucket) noexcept
     {
+        auto before = overflow_bucket->before_begin();
         for(auto it = overflow_bucket->begin(); it != overflow_bucket->end(); ++it)
         {
             bool found = false;
@@ -156,9 +188,12 @@ private:
             }
                 
             if(!it->bid_value.has_value() && !it->ask_value.has_value())
-                overflow_bucket->erase(it);
+                overflow_bucket->erase_after(before);
             
-            return found;
+            if( found)
+                return true;
+            
+            ++before;
         
         }
         return false;
@@ -224,23 +259,27 @@ public:
     
     HashOrderBook(const Key& hashing_mid_price)
     : _hashing_mid_price(hashing_mid_price)
+    , _ask_End(this)
+    , _cask_End(this)
+    , _bid_End(this)
+    , _cbid_End(this)
     {
         for(auto& bucket : _buckets)
         {
             bucket.nodes = std::make_unique<std::array<bid_ask_node, collision_buckets>>();
-            bucket.overflow_bucket = std::make_unique<std::list<bid_ask_node>>();
+            bucket.overflow_bucket = std::make_unique<list_type>();
         }
     }
     ~HashOrderBook() = default;
     HashOrderBook(const HashOrderBook&) = delete;
     
-    void rehash(size_t hashing_mid_price)
+    void rehash(const Key& hashing_mid_price)
     {
         bucket_type new_buckets;
         for(auto& bucket : new_buckets) //fill blank buckets
         {
             bucket.nodes = std::make_unique<std::array<bid_ask_node, collision_buckets>>();
-            bucket.overflow_bucket = std::make_unique<std::list<bid_ask_node>>();
+            bucket.overflow_bucket = std::make_unique<list_type>();
         }
         _size = 0; //todo: size will update on _insert below. a little odd but ok for now.
         for(auto& bucket : _buckets) //extract each value from curret buckets and insert into new_buckets
@@ -354,7 +393,7 @@ public:
     }
     
 private:
-    bool _insert(Side side, Key&& key, Value&& value, bucket_type& buckets, size_t& hashing_mid_price)
+    bool _insert(Side side, Key&& key, Value&& value, bucket_type& buckets, const Key& hashing_mid_price)
     {
         size_t hash, collision_bucket; //collision bucket of 0 means we are looking in the "first node". Should give us better cache performance
         _hash_key(side, key, hash, collision_bucket, hashing_mid_price);
@@ -386,7 +425,7 @@ private:
             node = _find_node(side, key, bucket.overflow_bucket); //it might be in overflow buckets
             if(!node)
             {
-                bucket.overflow_bucket->emplace_back(bid_ask_node(std::move(key), std::move(value), side));
+                bucket.overflow_bucket->emplace_front(bid_ask_collision_node(std::move(key), std::move(value), side, collision_bucket));
                 ++_size;
                 return true;
             }
@@ -484,7 +523,8 @@ public:
             value = node->ask_value.value().second;
             return true;
         }
-        return false;
+        else
+            return false;
     }
     
     bool erase(Side side, const Key& key)
@@ -493,7 +533,7 @@ public:
         hash_key(side, key, hash, collision_bucket);
         auto& bucket = _buckets[hash];
         
-        bid_ask_node* node = nullptr;
+        bid_ask_node* node = nullptr; //unfortunately faster than using std::optinal<std::reference_wrapper<bid_ask_node>> and checking if it has value.
         
         if(collision_bucket == 0) //we're looking in "first_node"
         {
@@ -570,13 +610,44 @@ public:
         return size;
     }
     
+    void clear()
+    {
+        for(auto& bucket : _buckets)
+        {
+            bucket.first_node.bid_value.reset();
+            bucket.first_node.ask_value.reset();
+            if(bucket.nodes)
+            {
+                for(auto& node : *bucket.nodes)
+                {
+                    node.bid_value.reset();
+                    node.ask_value.reset();
+                }
+            }
+            if(bucket.overflow_bucket)
+            {
+                bucket.overflow_bucket->clear();
+            }
+        }
+        _size = 0;
+        _best_bid.reset();
+        _best_offer.reset();
+    }
+    
+    void clear(const Key& new_mid_price)
+    {
+        clear();
+        _hashing_mid_price = new_mid_price;
+    }
+    
     friend void RunTests();
     
 private:
     
-    /*enum class IteratorDirection { FORWARD, REVERSE};
+
+    //enum class IteratorDirection { FORWARD, REVERSE}; sticking to foward iterators for now
     enum class IteratorConstness { CONST, NON_CONST};
-    template<IteratorDirection direction, IteratorConstness constness = IteratorConstness::NON_CONST>
+    template<Side side, /*IteratorDirection direction, */IteratorConstness constness = IteratorConstness::NON_CONST>
     class Xiterator
     {
     private:
@@ -587,13 +658,27 @@ private:
         using pointer = std::conditional_t<constness == IteratorConstness::CONST, const Xiterator*, Xiterator*>;
         using reference = std::conditional_t<constness == IteratorConstness::CONST, const Xiterator&, Xiterator&>;
         
-        value_type_pointer _node = nullptr;
+        size_t _index = 0, _collision_bucket = 0;
         book_pointer _book = nullptr;
-        IteratorDirection _direction = direction;
+        Side _side = side;
+        //IteratorDirection _direction = direction;
+        bool _isEnd = true;
         
-        Xiterator(value_type_pointer node, book_pointer book)
-        : _node(node),
-        _book(book)
+        Xiterator(size_t index, size_t collision_bucket, book_pointer book, bool isEnd = false)
+        : _index(index),
+          _collision_bucket(collision_bucket),
+          _book(book),
+          _isEnd(isEnd)
+        {
+            while(!_has_price() && _has_next())
+                this->operator++();
+            if(!_has_price() && !_has_next())
+                _isEnd = true;
+        }
+        
+        Xiterator(book_pointer book)
+        : _book(book),
+          _isEnd(true)
         {
         }
         
@@ -604,84 +689,202 @@ private:
         
         Xiterator(Xiterator&& other) noexcept
         {
-            _node = std::move(other._node);
+            _index = std::move(other._index);
+            _collision_bucket = std::move(other._collision_bucket);
             _book = std::move(other._book);
-            _direction = std::move(other._direction);
+            //_direction = std::move(other._direction);
+            _side = std::move(other._side);
+            _isEnd = std::move(other._isEnd);
         }
 
         // Default copy assignment operator - used for same type
         Xiterator& operator=(const Xiterator& other) noexcept = default;
 
         // Prevent cross-direction copying and assignment using a deleted function template
-        template<IteratorDirection OtherDirection>
-        Xiterator(const Xiterator<OtherDirection>&) = delete;
+        template<Side otherSide>
+        Xiterator(const Xiterator<otherSide>&) = delete;
        
-        template<IteratorDirection OtherDirection>
-        Xiterator& operator=(const Xiterator<OtherDirection>&) = delete;
+        template<Side otherSide>
+        Xiterator& operator=(const Xiterator<otherSide>&) = delete;
         
         //converter functions to convert form forward to reverse and vice versa
         //template<IteratorDirection OtherDirection>
-        auto get_other_direction() const  noexcept {
+        /*auto get_other_direction() const  noexcept {
             if constexpr (direction == IteratorDirection::FORWARD) {
-                return Xiterator<IteratorDirection::REVERSE, constness>(_node, _book);
+                return Xiterator<Side, IteratorDirection::REVERSE, constness>(_index, _collision_bucket, _book);
             } else {
-                return Xiterator<IteratorDirection::FORWARD, constness>(_node, _book);
+                return Xiterator<Side, IteratorDirection::FORWARD, constness>(_index, _collision_bucket, _book);
+            }
+        }*/
+        
+        auto get_other_side() const noexcept{
+            if constexpr (side == Side::BID) {
+                return Xiterator<Side::ASK, /*direction,*/ constness>(_index, _collision_bucket, _book);
+            } else {
+                return Xiterator<Side::BID, /*direction,*/ constness>(_index, _collision_bucket, _book);
             }
         }
                     
+    private:
         
+        size_t _get_max_collision_bucket(const collision_bucket<collision_buckets>& bucket) const
+        {
+            //given the current index what is the max collision bucket in the overflow buckets
+            //const auto& bucket = _book->_buckets[_index].overflow_bucket;
+            
+            auto it = std::max_element(bucket.overflow_bucket->begin(), bucket.overflow_bucket->end(), [](const auto& a, const auto& b)
+            {
+                return a.collision_index < b.collision_index;
+            });
+            if(it != bucket.overflow_bucket->end())
+               return it->collision_index;
+            return 0;
+        }
+        
+        bool _has_next_overflow_bucket() const //this might be too slow :( but is it worse than possibly adding more overhead on the insert /erase to track say, worst price or max price?
+        {
+            //for each overflow bucket starting from the current index if the max collison bucket is larger than the current collion index there must be more.
+            //if we are at the end of the overflow buckets then there are no more
+            if constexpr (side == Side::ASK)
+            {
+                for(auto it = _book->buckets.begin() + _index; it != _book->buckets.end(); ++it)
+                {
+                    if(_get_max_collision_bucket(*it) >= _collision_bucket)
+                        return true;
+                }
+                return false;
+            }
+            else
+            {
+                for(auto it = _book->_buckets.rbegin() + (_index + fast_book_size); it != _book->_buckets.rend(); ++it)
+                {
+                    if(_get_max_collision_bucket(*it) >= _collision_bucket)
+                        return true;
+                }
+                return false;
+            }
+        }
+        
+        bool _has_next() const
+        {
+            if(!_book) [[unlikely]]
+                return false;
+            
+            //if we're in fast map or collison bucket territory then there is a possiblity of a next time
+            auto next_index = _index;
+            auto next_collision_bucket = _collision_bucket;
+            _next_index(next_index, next_collision_bucket);
+            
+            if(next_collision_bucket <= collision_buckets)
+                return true;
+            else //otherwise we have to find the max collision bucket in each overflow bucket
+                return _has_next_overflow_bucket();
+        }
+        
+        
+        constexpr void _next_index(size_t& index, size_t& collision_bucket) const//bool increment)
+        {
+            if(!_book) [[unlikely]]
+                return;
+            if constexpr (side == Side::ASK)
+            {
+                const long next_index = static_cast<long>(index) + 1;
+                index = _book->_positiveMod( next_index, fast_book_size);
+                collision_bucket = _book->_calc_collision_bucket(next_index, fast_book_size);
+            }
+            else
+            {
+                const long next_index = static_cast<long>(index) - 1;
+                index = _book->_positiveMod(next_index, fast_book_size);
+                collision_bucket = _book->_calc_collision_bucket(next_index, fast_book_size);
+            }
+        }
+        
+        bool _has_price() const
+        {
+            if(_collision_bucket == 0)
+            {
+                const auto& fn = _book->_buckets[_index].first_node;
+                return fn.bid_value.has_value() || fn.ask_value.has_value();
+            }
+            else if(_collision_bucket <= collision_buckets)
+            {
+                const auto collision_index = _collision_bucket - 1;
+                const auto & nodes = *_book->_buckets[_index].nodes;
+                const auto& cb = nodes[collision_index];
+                return cb.bid_value.has_value() || cb.ask_value.has_value();
+            }
+            else //is overflow bucket
+            {
+                const auto& ob = *_book->_buckets[_index].overflow_bucket;
+                
+                for(const auto& node : ob)
+                {
+                    if(node.collision_index == _collision_bucket)
+                        return node.bid_value.has_value() || node.ask_value.has_value();
+                }
+                return false;
+            }
+        }
+        
+        value_type* _get_value_type() const
+        {
+            if(_collision_bucket == 0)
+            {
+                return &_book->_buckets[_index].first_node;
+            }
+            else if(_collision_bucket <= collision_buckets)
+            {
+                const auto collision_index = _collision_bucket - 1;
+                auto& nodes = *_book->_buckets[_index].nodes;
+                return &nodes[collision_index];
+            }
+            else //is overflow bucket
+            {
+                auto& ob = *_book->_buckets[_index].overflow_bucket;
+                
+                for(auto& node : ob)
+                {
+                    if(node.collision_index == _collision_bucket)
+                        return &node;
+                }
+                return nullptr;
+            }
+        }
+    public:
         reference operator++()
         {
-            if(_node == nullptr || _tree == nullptr)
+            if(_book == nullptr) [[unlikely]]
             {
                 return *this;
             }
             
-            //value_type tree to traverse
-            if (_direction == IteratorDirection::FORWARD)
+            while( _has_next())
             {
-                if(_node->children[RIGHT] == nullptr )
-                    _node = nullptr;
-                else if(_tree->get(_node->first) != nullptr)//make sure node is at the root
-                    _node = _tree->_rotateToNextLarger();
+                _next_index(_index, _collision_bucket);
+                if(_has_price())
+                    return *this;
             }
-            else
-            {
-                if(_node->children[LEFT] == nullptr )
-                    _node = nullptr;
-                else if(_tree->get(_node->first) != nullptr)
-                    _node = _tree->_rotateToNextSmaller();
-            }
-            _isEnd = _node == nullptr;
+           
+            _isEnd = true;
             return *this;
         }
-        reference operator--()
+        /*reference operator--()
         {
-            if(_isEnd || _node == nullptr || _book == nullptr)
+            if(_book == nullptr) [[unlikely]]
             {
-                _isEnd = true;
                 return *this;
             }
             
-            //value_type tree to traverse
-            if (_direction == IteratorDirection::FORWARD)
+            for(; _migh_have_next(); _next_index(true))
             {
-                //make sure node is at the root
-                if(_node->children[LEFT] == nullptr )
-                    _node = nullptr;
-                else if(_tree->get(_node->first) != nullptr)
-                    _node = _tree->_rotateToNextSmaller();
+                if(_has_price())
+                    return *this;
             }
-            else
-            {
-                if(_node->children[RIGHT] == nullptr )
-                    _node = nullptr;
-                else if(_tree->get(_node->first) != nullptr)
-                    _node = _tree->_rotateToNextLarger();
-            }
-            _isEnd = _node == nullptr;
+           
+            _isEnd = true;
             return *this;
-        }
+        }*/
         //pre-increment
         value operator++(int)
         {
@@ -690,19 +893,19 @@ private:
             return tmp;
         }
         //pre-decrement
-        value operator--(int)
+        /*value operator--(int)
         {
             Xiterator tmp = *this;
             --(*this);
             return tmp;
-        }
+        }*/
         constexpr value_type_pointer operator->() const
         {
-            return _node;
+            return _get_value_type();
         }
         constexpr value_type_reference operator*() const
         {
-            return *_node;
+            return *_get_value_type();
         }
         constexpr bool operator==(const Xiterator& rhs) const
         {
@@ -710,11 +913,7 @@ private:
                 return false;
             if(_isEnd == rhs._isEnd)
                 return true;
-            if(_node == nullptr && rhs._node == nullptr)
-                return true;
-            if(_node == nullptr || rhs._node == nullptr)
-                return false;
-            return *_node == *rhs._node;
+            return _index == rhs._index && _collision_bucket == rhs._collision_bucket;
         }
         constexpr bool operator!=(const Xiterator& rhs) const
         {
@@ -722,14 +921,89 @@ private:
                 return true;
             if(_isEnd != rhs._isEnd)
                 return true;
-            if(_node == nullptr && rhs._node == nullptr)
-                return false;
-            if(_node == nullptr || rhs._node == nullptr)
-                return true;
-            return *_node != *rhs._node;
+            return _index != rhs._index || _collision_bucket != rhs._collision_bucket;
         }
         friend class HashOrderBook;
-    };*/
+    };
+public:
+    using ask_itertator = Xiterator<Side::ASK>;
+    using const_ask_itertator = Xiterator<Side::ASK, IteratorConstness::NON_CONST>;
+    using bid_itertator = Xiterator<Side::BID>;
+    using const_bid_itertator = Xiterator<Side::BID, IteratorConstness::NON_CONST>;
+private:
+    const ask_itertator _ask_End;
+    const const_ask_itertator _cask_End;
+    const bid_itertator _bid_End;
+    const const_bid_itertator _cbid_End;
+public:
+    
+    const ask_itertator& ask_end()
+    {
+        return _ask_End;
+    }
+    
+    const const_ask_itertator& ask_end() const
+    {
+        return _cask_End;
+    }
+    
+    const bid_itertator& bid_end()
+    {
+        return _bid_End;
+    }
+    
+    const const_bid_itertator& bid_end() const
+    {
+        return _cbid_End;
+    }
+    
+    ask_itertator ask_begin()
+    {
+        if(_best_offer.has_value())
+        {
+            size_t hash, collision_bucket;
+            hash_key(Side::ASK, _best_offer.value(), hash, collision_bucket);
+            return ask_itertator(hash, collision_bucket, this);
+        }
+        else
+            return ask_end();
+    }
+    
+    const_ask_itertator ask_begin() const
+    {
+        if(_best_offer.has_value())
+        {
+            size_t hash, collision_bucket;
+            hash_key(Side::ASK, _best_offer.value(), hash, collision_bucket);
+            return const_ask_itertator(hash, collision_bucket, this);
+        }
+        else
+            return ask_end();
+    }
+    
+    bid_itertator bid_begin()
+    {
+        if(_best_bid.has_value())
+        {
+            size_t hash, collision_bucket;
+            hash_key(Side::BID, _best_bid.value(), hash, collision_bucket);
+            return bid_itertator( hash, collision_bucket, this);
+        }
+        else
+            return bid_end();
+    }
+    
+    const_bid_itertator bid_begin() const
+    {
+        if(_best_bid.has_value())
+        {
+            size_t hash, collision_bucket;
+            hash_key(Side::BID, _best_bid.value(), hash, collision_bucket);
+            return const_bid_itertator(hash, collision_bucket, this);
+        }
+        else
+            return bid_end();
+    }
 };
 
 #endif /* HashOrderBook_h */
